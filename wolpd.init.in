@@ -1,0 +1,81 @@
+#!/bin/sh
+#
+# wolpd - Wake-On-Lan proxy daemon
+#
+# chkconfig:   - 60 72
+# description: Wake-On-Lan proxy daemon.
+# 
+
+# http://fedoraproject.org/wiki/FCNewInit/Initscripts
+### BEGIN INIT INFO
+# Provides:  
+# Required-Start: 
+# Required-Stop: 
+# Should-Start: 
+# Should-Stop: 
+# Default-Start: 
+# Default-Stop: 
+# Short-Description: 
+# Description: 
+### END INIT INFO
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+exec="@sbindir@/wolpd"
+
+[ -e /etc/sysconfig/wolpd ] && . /etc/sysconfig/wolpd
+
+lockfile=/var/lock/subsys/wolpd
+
+start() {
+    echo -n $"Starting wolpd: "
+    daemon $exec $WOLPDARGS
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && touch $lockfile
+    return $retval
+}
+
+stop() {
+    echo -n $"Stopping wolpd: "
+    killproc wolpd
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start|stop|restart)
+        $1
+        ;;
+    force-reload)
+        restart
+        ;;
+    status)
+        status wolpd
+        ;;
+    try-restart|condrestart)
+        if status wolpd >/dev/null ; then
+            restart
+        fi
+	;;
+    reload)
+        # If config can be reloaded without restarting, implement it here,
+        # remove the "exit", and add "reload" to the usage message below.
+        # For example:
+        # status wolpd >/dev/null || exit 7
+        # killproc wolpd -HUP
+        action $"Service ${0##*/} does not support the reload action: " /bin/false
+        exit 3
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|try-restart|force-reload}"
+        exit 2
+esac

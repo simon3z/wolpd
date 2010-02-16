@@ -1,0 +1,68 @@
+Name:           @PACKAGE@
+Version:        @PACKAGE_VERSION@
+Release:        1%{?dist}
+Summary:        Wake-On-Lan proxy daemon
+
+Group:          System Environment/Daemons
+License:        GPLv3+
+# TODO: real url
+URL:            http://example.com
+Source0:        %{name}-%{version}.tar.gz
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
+#BuildRequires:  
+#Requires:       
+
+%description
+Wake-On-Lan proxy daemon.
+
+%prep
+%setup -q
+
+
+%build
+%configure
+make %{?_smp_mflags}
+
+
+%install
+rm -rf $RPM_BUILD_ROOT
+make install DESTDIR=$RPM_BUILD_ROOT
+%{__install} -D -m 755 wolpd.init \
+    $RPM_BUILD_ROOT/%{_sysconfdir}/rc.d/init.d/wolpd
+%{__install} -D -m 755 wolpd.sysconfig \
+    $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig/wolpd
+
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+
+%post
+/sbin/chkconfig --add wolpd
+
+
+%preun
+if [ $1 = 0 ]; then
+    /sbin/service wolpd stop > /dev/null 2>&1
+    /sbin/chkconfig --del wolpd
+fi
+
+
+%postun
+/sbin/service wolpd condrestart >/dev/null 2>&1 || :
+
+
+%files
+%defattr(-,root,root,-)
+%doc AUTHORS COPYING NEWS ChangeLog README
+%config(noreplace) %{_sysconfdir}/sysconfig/wolpd
+%{_sysconfdir}/rc.d/init.d/wolpd
+%{_sbindir}/wolpd
+%{_mandir}/man8/wolpd.8*
+
+
+%changelog
+* Fri Feb 12 2010 Federico Simoncelli <federico.simoncelli@gmail.com> 0.5.0-1
+- first release
+
