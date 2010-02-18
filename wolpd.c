@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
     int ex_socket, in_socket, sockbcast;
     uint8_t wol_buf[WOL_BUFSIZE], *wol_msg, *wol_hw;
     ssize_t wol_len;
-    struct ifreq ifhw, ifid;
+    struct ifreq ifhw;
     struct sockaddr_in wol_src, wol_rmt;
     struct sockaddr_ll wol_dst;
     socklen_t wol_rmt_len;
@@ -144,10 +144,10 @@ int main(int argc, char *argv[])
 
     /* initializing */
     strncpy(ifhw.ifr_name, g_interface, sizeof(ifhw.ifr_name));
-    strncpy(ifid.ifr_name, g_interface, sizeof(ifid.ifr_name));
-
-    sockbcast = 1;
+    memset(wol_buf, 0x00, ETHER_HDR_LEN);
     wol_msg   = wol_buf + ETHER_HDR_LEN;
+    wol_hw    = wol_msg + sizeof(g_magic);
+    sockbcast = 1;
 
     if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("couldn't open external socket");
@@ -159,40 +159,42 @@ int main(int argc, char *argv[])
         goto exit_fail2;
     }
 
-    if (ioctl(in_socket, SIOCGIFHWADDR, &ifhw) < 0) {
-        perror("couldn't request local hwaddress");
-        goto exit_fail3;
-    }
-
-    if (ioctl(in_socket, SIOCGIFINDEX, &ifid) < 0) {
-        perror("couldn't request adapter index");
-        goto exit_fail3;
-    }
-
     if (setsockopt(in_socket, SOL_SOCKET,
             SO_BROADCAST, &sockbcast, sizeof(sockbcast)) < 0) {
         perror("couldn't use broadcast socket");
         goto exit_fail3;
     }
 
+    /* initializing wol destination */
+    if (ioctl(in_socket, SIOCGIFINDEX, &ifhw) < 0) {
+        perror("couldn't request adapter index");
+        goto exit_fail3;
+    }
+
+    memset(&wol_dst, 0, sizeof(wol_dst));
+    wol_dst.sll_family  = AF_PACKET;
+    wol_dst.sll_ifindex = ifhw.ifr_ifindex;
+    wol_dst.sll_halen   = ETH_ALEN;
+
+    /* initializing wol message */
+    if (ioctl(in_socket, SIOCGIFHWADDR, &ifhw) < 0) {
+        perror("couldn't request local hwaddress");
+        goto exit_fail3;
+    }
+
+    memcpy(wol_buf + (ETHER_ADDR_LEN),
+                             ifhw.ifr_hwaddr.sa_data, ETHER_ADDR_LEN);
+    memcpy(wol_buf + (ETHER_ADDR_LEN * 2), g_woltype, ETHER_TYPE_LEN);
+
     memset(&wol_src, 0, sizeof(wol_src));
     wol_src.sin_family      = AF_INET;
     wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
     wol_src.sin_port        = htons(g_port);
 
-    memset(&wol_dst, 0, sizeof(wol_dst));
-    wol_dst.sll_family  = AF_PACKET;
-    wol_dst.sll_ifindex = ifid.ifr_ifindex;
-    wol_dst.sll_halen   = ETH_ALEN;
-
     if (bind(ex_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
         perror("couldn't bind to local interface");
         goto exit_fail3;
     }
-
-    /* initializing wol message */
-    memcpy(wol_buf + (ETHER_ADDR_LEN), ifhw.ifr_hwaddr.sa_data, ETHER_ADDR_LEN);
-    memcpy(wol_buf + (ETHER_ADDR_LEN * 2), g_woltype, ETHER_TYPE_LEN);
 
     if (g_foreground == 0) background();
 
@@ -207,6 +209,12 @@ int main(int argc, char *argv[])
             goto exit_fail3;
         }
 
+        if (wol_len < sizeof(g_magic) + ETHER_ADDR_LEN) {
+            syslog(LOG_ERR,
+                "packet too short from %s", inet_ntoa(wol_rmt.sin_addr));
+            continue;
+        }
+
         if (memcmp(wol_msg, g_magic, sizeof(g_magic)) != 0) {
             syslog(LOG_ERR,
                 "unknown packed from %s", inet_ntoa(wol_rmt.sin_addr));
@@ -215,13 +223,6 @@ int main(int argc, char *argv[])
 
         wol_hw = wol_msg + sizeof(g_magic);
 
-        syslog(LOG_NOTICE, "forwarding magic packet from %s to "
-            "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
-            inet_ntoa(wol_rmt.sin_addr),
-            wol_hw[0], wol_hw[1], wol_hw[2],
-            wol_hw[3], wol_hw[4], wol_hw[5]
-        );
-        
         memcpy(wol_buf, wol_hw, ETH_ALEN);
         memcpy(wol_dst.sll_addr, wol_hw, ETH_ALEN);
 
@@ -231,6 +232,13 @@ int main(int argc, char *argv[])
             perror("couldn't send data to internal socket");
             goto exit_fail3;
         }
+
+        syslog(LOG_NOTICE, "magic packet from %s forwarded to "
+            "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx",
+            inet_ntoa(wol_rmt.sin_addr),
+            wol_hw[0], wol_hw[1], wol_hw[2],
+            wol_hw[3], wol_hw[4], wol_hw[5]
+        );
     }
 
 exit_fail3:
