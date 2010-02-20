@@ -1,3 +1,20 @@
+/* wolpd - Wake-On-LAN Proxy Daemon
+ * Copyright (C) 2010  Federico Simoncelli <federico.simoncelli@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -20,22 +37,25 @@
 #include <config.h>
 #endif
 
-#ifndef DEFAULT_IFACE
+
 #define DEFAULT_IFACE "eth0"
-#endif
+#define DEFAULT_PORT  9
 
-#ifndef DEFAULT_PORT
-#define DEFAULT_PORT 9
-#endif
+#define ETH_P_WOL       0x0842
+#define WOL_MAGIC_LEN   6
 
-#define WOL_BUFSIZE     1024
+uint8_t wol_magic[WOL_MAGIC_LEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
+struct eth_frame {
+    struct ethhdr       head;
+    uint8_t             data[ETH_DATA_LEN];
+};
 
 
-int       g_foreground  = 0;
-char     *g_interface   = DEFAULT_IFACE;
-uint16_t  g_port        = DEFAULT_PORT;
-uint8_t   g_magic[]     = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-uint8_t   g_woltype[]   = { 0x08, 0x42 };
+/* global options */
+char     *g_iface    = DEFAULT_IFACE;
+uint16_t  g_port     = DEFAULT_PORT;
+int       g_foregnd  = 0;
 
 
 void version_and_exit()
@@ -96,10 +116,10 @@ void parse_options(int argc, char *argv[])
                 version_and_exit();
                 break;
             case 'i':
-                g_interface = optarg;
+                g_iface = optarg;
                 break;
             case 'f':
-                g_foreground = 1;
+                g_foregnd = 1;
                 break;
         }
     }
@@ -132,8 +152,8 @@ void background(void) {
 
 int main(int argc, char *argv[])
 {
-    int ex_socket, in_socket, sockbcast;
-    uint8_t wol_buf[WOL_BUFSIZE], *wol_msg, *wol_hw;
+    int ex_socket, in_socket;
+    struct eth_frame wol_msg;
     ssize_t wol_len;
     struct ifreq ifhw;
     struct sockaddr_in wol_src, wol_rmt;
@@ -141,13 +161,6 @@ int main(int argc, char *argv[])
     socklen_t wol_rmt_len;
 
     parse_options(argc, argv);
-
-    /* initializing */
-    strncpy(ifhw.ifr_name, g_interface, sizeof(ifhw.ifr_name));
-    memset(wol_buf, 0x00, ETHER_HDR_LEN);
-    wol_msg   = wol_buf + ETHER_HDR_LEN;
-    wol_hw    = wol_msg + sizeof(g_magic);
-    sockbcast = 1;
 
     if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("couldn't open external socket");
@@ -159,13 +172,9 @@ int main(int argc, char *argv[])
         goto exit_fail2;
     }
 
-    if (setsockopt(in_socket, SOL_SOCKET,
-            SO_BROADCAST, &sockbcast, sizeof(sockbcast)) < 0) {
-        perror("couldn't use broadcast socket");
-        goto exit_fail3;
-    }
-
     /* initializing wol destination */
+    strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
+
     if (ioctl(in_socket, SIOCGIFINDEX, &ifhw) < 0) {
         perror("couldn't request adapter index");
         goto exit_fail3;
@@ -182,9 +191,8 @@ int main(int argc, char *argv[])
         goto exit_fail3;
     }
 
-    memcpy(wol_buf + (ETHER_ADDR_LEN),
-                             ifhw.ifr_hwaddr.sa_data, ETHER_ADDR_LEN);
-    memcpy(wol_buf + (ETHER_ADDR_LEN * 2), g_woltype, ETHER_TYPE_LEN);
+    memcpy(wol_msg.head.h_source, ifhw.ifr_hwaddr.sa_data, ETH_ALEN);
+    wol_msg.head.h_proto = htons(ETH_P_WOL);
 
     memset(&wol_src, 0, sizeof(wol_src));
     wol_src.sin_family      = AF_INET;
@@ -196,48 +204,47 @@ int main(int argc, char *argv[])
         goto exit_fail3;
     }
 
-    if (g_foreground == 0) background();
+    if (g_foregnd == 0) background();
 
     while (1)
     {
         wol_rmt_len = sizeof(wol_rmt);
 
         if ((wol_len = recvfrom(
-                ex_socket, wol_msg, WOL_BUFSIZE - ETHER_HDR_LEN, 0,
+                ex_socket, wol_msg.data, ETH_DATA_LEN, 0,
                     (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
             perror("couldn't receive data from external socket");
             goto exit_fail3;
         }
 
-        if (wol_len < sizeof(g_magic) + ETHER_ADDR_LEN) {
+        if (wol_len < WOL_MAGIC_LEN + ETH_ALEN) {
             syslog(LOG_ERR,
                 "packet too short from %s", inet_ntoa(wol_rmt.sin_addr));
             continue;
         }
 
-        if (memcmp(wol_msg, g_magic, sizeof(g_magic)) != 0) {
+        if (memcmp(wol_msg.data, wol_magic, WOL_MAGIC_LEN) != 0) {
             syslog(LOG_ERR,
                 "unknown packed from %s", inet_ntoa(wol_rmt.sin_addr));
             continue;
         }
 
-        wol_hw = wol_msg + sizeof(g_magic);
-
-        memcpy(wol_buf, wol_hw, ETH_ALEN);
-        memcpy(wol_dst.sll_addr, wol_hw, ETH_ALEN);
+        memcpy(wol_msg.head.h_dest, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
+        memcpy(wol_dst.sll_addr, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
 
         if ((wol_len = sendto(
-                in_socket, wol_buf, (size_t) wol_len + ETHER_HDR_LEN, 0,
+                in_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
-            perror("couldn't send data to internal socket");
+            perror("couldn't forward data to internal socket");
             goto exit_fail3;
         }
 
         syslog(LOG_NOTICE, "magic packet from %s forwarded to "
             "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx",
             inet_ntoa(wol_rmt.sin_addr),
-            wol_hw[0], wol_hw[1], wol_hw[2],
-            wol_hw[3], wol_hw[4], wol_hw[5]
+            wol_msg.head.h_dest[0], wol_msg.head.h_dest[1],
+            wol_msg.head.h_dest[2], wol_msg.head.h_dest[3],
+            wol_msg.head.h_dest[4], wol_msg.head.h_dest[5]
         );
     }
 
