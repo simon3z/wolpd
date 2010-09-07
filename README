@@ -36,3 +36,8 @@ Install Instructions
 
   # make install
 
+Debugging Tips
+==============
+
+  # tcpdump -i <interface> ether proto 0x0842
+
