@@ -125,31 +125,6 @@ void parse_options(int argc, char *argv[])
     }
 }
 
-void background(void) {
-    pid_t pid, sid;
-    
-    if ((pid = fork()) < 0) {
-        exit(EXIT_FAILURE);
-    }
-    else if (pid > 0) {
-        exit(EXIT_SUCCESS);
-    }
-
-    umask(0);
-
-    if ((sid = setsid()) < 0) {
-        exit(EXIT_FAILURE);
-    }
-    
-    if ((chdir("/")) < 0) {
-        exit(EXIT_FAILURE);
-    }
-    
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
-}
-
 int main(int argc, char *argv[])
 {
     int ex_socket, in_socket;
@@ -204,7 +179,7 @@ int main(int argc, char *argv[])
         goto exit_fail3;
     }
 
-    if (g_foregnd == 0) background();
+    if (g_foregnd == 0) daemon(0, 0);
 
     while (1)
     {
