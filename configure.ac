@@ -10,6 +10,9 @@ AC_CONFIG_HEADERS([config.h])
 # Checks for programs.
 AC_PROG_CC
 
+# Configure default CFLAGS.
+CFLAGS="-g -O2 -Wall -Wshadow -Wconversion"
+
 # Checks for libraries.
 
 # Checks for header files.

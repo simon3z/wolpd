@@ -26,10 +26,13 @@ Building from the repository (requires autoreconf):
   $ ./configure
   $ make
 
-Building the rpm packages:
+Building the tarball package:
 
   $ make dist-gzip
-  $ rpmbuild -ta wolpd-<version>.tar.gz
+
+Building the rpms:
+
+  $ make rpmbuild
 
 Install Instructions
 ====================
