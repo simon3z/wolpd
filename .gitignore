@@ -12,6 +12,7 @@ Makefile.in
 /config.status
 /configure
 /configure.scan
+/compile
 /depcomp
 /install-sh
 /missing
@@ -20,3 +21,5 @@ Makefile.in
 /wolpd.8
 /wolpd.init
 /wolpd.spec
+/build/
+/nbproject/
