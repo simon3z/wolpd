@@ -1,4 +1,5 @@
 /* wolpd - Wake-On-LAN Proxy Daemon
+ * Copyright (C) 2015  Charles-Antoine Degennes <cadegenn@univ-lr.fr>
  * Copyright (C) 2010  Federico Simoncelli <federico.simoncelli@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -179,7 +180,11 @@ int main(int argc, char *argv[])
         goto exit_fail3;
     }
 
-    if (g_foregnd == 0) daemon(0, 0);
+    if (g_foregnd == 0) {
+		if (daemon(0, 0) == -1) {
+			perror(strerror(errno));
+		};
+	}
 
     while (1)
     {
