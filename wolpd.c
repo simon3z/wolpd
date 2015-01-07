@@ -184,8 +184,8 @@ int main(int argc, char *argv[])
 
     parse_options(argc, argv);
 
-	/* search for list of mac address per vlan */
-	if (find_configfiles("/etc", "wolpd.", config_filenames) == -1) {
+	/* search for list of mac address per vlan in configuration files */
+	if (find_configfiles("/etc", "wolpd.", config_filenames) < 0) {
 		perror("No config filenames found in /etc");
 		exit(EXIT_FAILURE);
 	}
