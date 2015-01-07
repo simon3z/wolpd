@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     }
 
     if (g_foregnd == 0) {
-		if (daemon(0, 0) == -1) {
+		if (daemon(0, 0) < 0) {
 			perror(strerror(errno));
 		};
 	}
