@@ -17,6 +17,7 @@
  */
 
 #include <arpa/inet.h>
+#include <dirent.h>				/* readdir(), etc.                    */
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -47,6 +48,9 @@
 
 uint8_t wol_magic[WOL_MAGIC_LEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
+#define MAX_MAC_ADDRESSES 8192
+#define MAX_INTERFACES 16		/* 4096 is way too much */
+
 struct eth_frame {
     struct ethhdr       head;
     uint8_t             data[ETH_DATA_LEN];
@@ -68,7 +72,8 @@ License GPLv3+: \
 GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\n\
-Written by Federico Simoncelli.\n",
+Modified by Charles-Antoine Degennes\n\
+Originally written by Federico Simoncelli.\n",
         PACKAGE_STRING);
 
     exit(EXIT_SUCCESS);
@@ -83,7 +88,7 @@ Options:\n\
   -h, --help              print this help, then exit.\n\
   -v, --version           print version number, then exit.\n\
   -f, --foreground        don't fork to background.\n\
-  -i, --interface=IFACE   destination network interface (default: %s).\n\
+  -i, --interface=IFACE   source network interface (default: %s).\n\
   -p, --port=PORT         udp port used for wol packets (default: %i).\n\n\
 Report bugs to <%s>.\n",
         PACKAGE_NAME, PACKAGE_NAME,
@@ -126,6 +131,46 @@ void parse_options(int argc, char *argv[])
     }
 }
 
+/*
+ * Find files based on pattern
+ * @param	string	directory to search in
+ * @param	string	pattern to match to
+ * @param	array	list of files that match pattern
+ * @return	int		-1 on failure
+ */
+int find_configfiles(char *directory, char *pattern, char *filename[]) {
+	DIR *dir;				/* pointer to the scanned directory. */
+	struct dirent* entry;	/* pointer to one directory entry.   */
+	unsigned int i = 0;
+	
+	/* open the directory for reading */
+    dir = opendir(directory);
+    if (!dir) {
+		//fprintf(stderr, "Cannot read directory '%s': ", cwd);
+		syslog(LOG_INFO, "ERROR: Opening directory '%s' failed with error '%s'\n", directory, strerror(errno));
+		exit(EXIT_FAILURE);
+    }
+	
+	/* scan the directory, */
+    /* matching the pattern for each file name.               */
+	while ((entry = readdir(dir))) {
+		if (entry->d_name && strstr(entry->d_name, pattern)) {
+			filename[i] = entry->d_name;
+			syslog(LOG_INFO, "Found %s file", filename[i]);
+			i++;
+			//printf("%s/%s\n", cwd, entry->d_name);
+		}
+	}
+	/* add the last entry "NULL". We will use it further to check the end of array */
+	filename[i] = NULL;
+	
+	if (i == 0) { // no match were found so, no file found
+		return -1;
+	} else {
+		return 0;
+	}
+}
+
 int main(int argc, char *argv[])
 {
     int ex_socket, in_socket;
@@ -135,8 +180,15 @@ int main(int argc, char *argv[])
     struct sockaddr_in wol_src, wol_rmt;
     struct sockaddr_ll wol_dst;
     socklen_t wol_rmt_len;
+	char *config_filenames[MAX_INTERFACES];	/* array of config filenames : 1 per interface */
 
     parse_options(argc, argv);
+
+	/* search for list of mac address per vlan */
+	if (find_configfiles("/etc", "wolpd.", config_filenames) == -1) {
+		perror("No config filenames found in /etc");
+		exit(EXIT_FAILURE);
+	}
 
     if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("couldn't open external socket");
