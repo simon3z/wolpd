@@ -248,7 +248,7 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
 }
 
 /*
- * Connect to a network interface
+ * Initialize outgoing interfaces
  * @param	string	name of the interface as return by ifconfig
  * @param	struct	sockaddr_ll
  * @return	int		socket
@@ -265,6 +265,7 @@ struct sockaddr_ll init_wol_dst(char *name) {
 	layer2.sll_ifindex = ifhw.ifr_ifindex;
 	layer2.sll_halen   = ETH_ALEN;
 
+	/* create a socket */
     if ((iface_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
 		syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
 		layer2.sll_ifindex = -1;
@@ -274,11 +275,56 @@ struct sockaddr_ll init_wol_dst(char *name) {
         syslog(LOG_ERR, "ERROR: ioctl() %s: %s", name, strerror(errno));
 		layer2.sll_ifindex = -1;
     }
+	/* close socket */
 	if (close(iface_socket) < 0) {
 		syslog(LOG_ERR, "ERROR: close() %s", strerror(errno));
 	}
 	
 	return layer2;
+}
+
+/*
+ * Initialize incoming interface and bind to it
+ * @return	int		incoming socket
+ */
+int init_wol_src() {
+	if (g_debug) syslog(LOG_DEBUG, "Try to bind to %s interface...", g_iface);
+    struct ifreq ifhw;
+    struct sockaddr_in wol_src;
+	int in_socket;
+	char *ip_address = malloc(sizeof (char*) * INET_ADDRSTRLEN);
+
+	/*  create the socket */
+    if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
+		syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+	
+	/* initialize interface by name */
+    memset(&ifhw, 0, sizeof(struct ifreq));
+    ifhw.ifr_addr.sa_family = AF_INET;
+    strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
+    if (ioctl(in_socket, SIOCGIFADDR, &ifhw) == -1) {
+        syslog(LOG_ERR, "ERROR: ioctl() %s: %s", g_iface, strerror(errno));
+		exit(EXIT_FAILURE);
+    }
+	
+	/* get ipaddress */
+	inet_ntop(AF_INET, &ifhw.ifr_addr.sa_data[2], ip_address, INET_ADDRSTRLEN);
+	syslog(LOG_INFO, "Found address %s at %s", ip_address, g_iface);
+	memset(&wol_src, 0, sizeof(wol_src));
+	wol_src.sin_family      = AF_INET;
+	//wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
+	wol_src.sin_addr.s_addr = inet_addr(ip_address);
+	wol_src.sin_port        = htons(g_port);
+	
+	/* bind socket to interface */
+    if (bind(in_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
+		syslog(LOG_ERR, "ERROR: bind() %d: %s", errno, strerror(errno));
+        perror("ERROR: couldn't bind to local interface");
+        exit(EXIT_FAILURE);
+    }
+	return in_socket;
 }
 
 int main(int argc, char *argv[])
@@ -339,6 +385,10 @@ int main(int argc, char *argv[])
         perror("ERROR: couldn't open internal socket");
         exit(EXIT_FAILURE);
     }
+
+	if (init_wol_src() < 0) {
+		syslog(LOG_INFO, "Interface %s does not exist.", g_iface);
+	}
 	
     /* initializing wol destination */
     strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
@@ -367,10 +417,10 @@ int main(int argc, char *argv[])
     wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
     wol_src.sin_port        = htons(g_port);
 
-    if (bind(ex_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
+    /*if (bind(ex_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
         perror("ERROR: couldn't bind to local interface");
         exit(EXIT_FAILURE);
-    }
+    }*/
 
     if (g_foregnd == 0) {
 		if (daemon(0, 0) < 0) {
