@@ -171,6 +171,58 @@ int find_configfiles(char *directory, char *pattern, char *filename[]) {
 	}
 }
 
+/*
+ * Read config file and store data in arrays
+ * @param	string	config filename to read
+ * @param	array	array of mac addresses read
+ * @param	int		count of mac addresses read
+ * @return	int		-1 on failure
+ */
+void read_config_per_interface(char *config_filename, char *mac_addresses[], int *mac_address_cnt) {
+	syslog (LOG_INFO, "Try to read %s\n", config_filename);
+    FILE *fp;
+    char mac_address_str [17];
+	//int i;
+
+	/* Open and read in the MAC addresses from the configuration file */
+    if ((fp = fopen (config_filename, "r")) == NULL)
+    {
+        sleep (1);
+        syslog (LOG_INFO, "Failed to open configuration file %s\n", config_filename);
+        exit (EXIT_FAILURE);
+    }
+    else
+    {
+        /* Read up to MAX_MAC_ADDRESSES from the config file into the MAC addreess array*/
+        *mac_address_cnt=0;
+        while ((fgets (mac_address_str, 17, fp) != NULL) && (*mac_address_cnt < MAX_MAC_ADDRESSES))
+        {
+            //int a[6];
+			unsigned int a[6];
+            if (sscanf(mac_address_str, "%02X:%02X:%02X:%02X:%02X:%02X", &a[0], &a[1], &a[2], &a[3], &a[4], &a[5]) == 6)
+            {
+				char *mac_address_compressed = malloc(sizeof (char*) * 12);		/* mac address without : char is 12 char long) */
+				mac_addresses[*mac_address_cnt] = malloc(sizeof (char*) * 12);
+				sprintf(mac_address_compressed, "%x%x%x%x%x%x", a[0], a[1], a[2], a[3], a[4], a[5]);
+				sprintf(mac_addresses[*mac_address_cnt], "%x%x%x%x%x%x", a[0], a[1], a[2], a[3], a[4], a[5]);
+                /*for (i=0; i<6;i++)
+                {
+            	    //mac_addresses [*mac_address_cnt][i] = a[i];
+					//memcpy(mac_addresses[*mac_address_cnt][i], (char*)&a[i], sizeof(int));
+					mac_addresses [*mac_address_cnt][i] = (char*)a[i];
+                }*/
+            }
+            else
+            {
+                syslog (LOG_INFO, "Error in configuration file at line%d\n", *mac_address_cnt);
+            }
+            (*mac_address_cnt)++;
+        }
+    }
+    fclose (fp);
+	syslog (LOG_INFO, "Found %d mac addresses in %s\n", *mac_address_cnt, config_filename);
+}
+
 int main(int argc, char *argv[])
 {
     int ex_socket, in_socket;
@@ -180,7 +232,11 @@ int main(int argc, char *argv[])
     struct sockaddr_in wol_src, wol_rmt;
     struct sockaddr_ll wol_dst;
     socklen_t wol_rmt_len;
+	char *config_full_path_name = malloc(sizeof (char*) * 256);			/* temporary variable to store full path name of current config filename */
 	char *config_filenames[MAX_INTERFACES];	/* array of config filenames : 1 per interface */
+	char *mac_addresses[MAX_INTERFACES][MAX_MAC_ADDRESSES];
+	int mac_address_cnt[MAX_INTERFACES];
+	unsigned int i = 0;
 
     parse_options(argc, argv);
 
@@ -188,6 +244,13 @@ int main(int argc, char *argv[])
 	if (find_configfiles("/etc", "wolpd.", config_filenames) < 0) {
 		perror("No config filenames found in /etc");
 		exit(EXIT_FAILURE);
+	}
+
+	i = 0;
+	while (config_filenames[i] != NULL) {
+		sprintf(config_full_path_name, "/etc/%s", config_filenames[i]);
+		read_config_per_interface(config_full_path_name, mac_addresses[i], &mac_address_cnt[i]);
+		i++;
 	}
 
     if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
