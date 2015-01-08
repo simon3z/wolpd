@@ -172,6 +172,17 @@ int find_configfiles(char *directory, char *pattern, char *filename[]) {
 }
 
 /*
+ * get the extension of a filename
+ * @param	string	filename
+ * @return	string	extension
+ */
+const char *get_filename_ext(const char *filename) {
+    const char *dot = strrchr(filename, '.');
+    if(!dot || dot == filename) return "";
+    return dot + 1;
+}
+
+/*
  * Read config file and store data in arrays
  * @param	string	config filename to read
  * @param	array	array of mac addresses read
