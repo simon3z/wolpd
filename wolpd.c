@@ -300,13 +300,16 @@ int main(int argc, char *argv[])
 
     parse_options(argc, argv);
 
-	/* search for list of mac address per vlan in configuration files */
+	/* search for list of mac address per vlan in configuration files 
+	 * config file must be named /etc/wolpd.${interface_name}
+	 */
 	if (find_configfiles("/etc", "wolpd.", config_filenames) < 0) {
 		perror("ERROR: No config filenames found in /etc");
 		exit(EXIT_FAILURE);
 	}
 
-	/* search for mac addresses in config files and connect to corresponding interfaces */
+	/* try to connect to interface to see if it exist
+	 * and if so, load list of mac addresses from config files */
 	i = 0;
 	while (config_filenames[i] != NULL) {
 		interface_names[i] = get_filename_ext(config_filenames[i]);
@@ -320,17 +323,18 @@ int main(int argc, char *argv[])
 		i++;
 	}
 
+	/* this socket will be use for outgoing packets */
     if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("ERROR: couldn't open external socket");
         exit(EXIT_FAILURE);
     }
 
+	/* this socket will be use for incoming packets */
     if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
         perror("ERROR: couldn't open internal socket");
         exit(EXIT_FAILURE);
     }
 	
-
     /* initializing wol destination */
     strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
 
