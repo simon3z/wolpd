@@ -296,8 +296,10 @@ int init_wol_src() {
 	char *ip_address = malloc(sizeof (char*) * INET_ADDRSTRLEN);
 
 	/*  create the socket */
-    if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
+	//if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
+	if ((in_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
 		syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
+		perror("ERROR: socket() ");
         exit(EXIT_FAILURE);
     }
 	//setsockopt(in_socket, SOL_SOCKET, SO_REUSEADDR, (void*) &optVal, optLen);
@@ -309,6 +311,7 @@ int init_wol_src() {
     strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
     if (ioctl(in_socket, SIOCGIFADDR, &ifhw) == -1) {
         syslog(LOG_ERR, "ERROR: ioctl() %s: %s", g_iface, strerror(errno));
+		perror("ERROR: ioctl() ");
 		exit(EXIT_FAILURE);
     }
 	
