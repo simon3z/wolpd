@@ -176,12 +176,12 @@ int find_configfiles(char *directory, char *pattern, char *filename[]) {
  * @param	string	config filename to read
  * @param	array	array of mac addresses read
  * @param	int		count of mac addresses read
- * @return	int		-1 on failure
  */
 void read_config_per_interface(char *config_filename, char *mac_addresses[], int *mac_address_cnt) {
 	syslog (LOG_INFO, "Try to read %s\n", config_filename);
     FILE *fp;
-    char mac_address_str [17];
+    //char mac_address_str [17];
+	char *mac_address_str = malloc(sizeof (char*) * 18);
 	//int i;
 
 	/* Open and read in the MAC addresses from the configuration file */
@@ -194,29 +194,34 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
     else
     {
         /* Read up to MAX_MAC_ADDRESSES from the config file into the MAC addreess array*/
-        *mac_address_cnt=0;
-        while ((fgets (mac_address_str, 17, fp) != NULL) && (*mac_address_cnt < MAX_MAC_ADDRESSES))
+        *mac_address_cnt = 0;
+        while ((fgets (mac_address_str, 18, fp) != NULL) && (*mac_address_cnt < MAX_MAC_ADDRESSES))
         {
-            //int a[6];
-			unsigned int a[6];
-            if (sscanf(mac_address_str, "%02X:%02X:%02X:%02X:%02X:%02X", &a[0], &a[1], &a[2], &a[3], &a[4], &a[5]) == 6)
+            int a[6];
+			//unsigned int a[6];
+			//if (sscanf(mac_address_str, "%02X:%02X:%02X:%02X:%02X:%02X", &a[0], &a[1], &a[2], &a[3], &a[4], &a[5]) == 6)
+			if (sscanf(mac_address_str, "%02x:%02x:%02x:%02x:%02x:%02x", &a[0], &a[1], &a[2], &a[3], &a[4], &a[5]) == 6)
             {
 				char *mac_address_compressed = malloc(sizeof (char*) * 12);		/* mac address without : char is 12 char long) */
 				mac_addresses[*mac_address_cnt] = malloc(sizeof (char*) * 12);
-				sprintf(mac_address_compressed, "%x%x%x%x%x%x", a[0], a[1], a[2], a[3], a[4], a[5]);
-				sprintf(mac_addresses[*mac_address_cnt], "%x%x%x%x%x%x", a[0], a[1], a[2], a[3], a[4], a[5]);
+				sprintf(mac_address_compressed, "%02x%02x%02x%02x%02x%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
+				sprintf(mac_addresses[*mac_address_cnt], "%02x%02x%02x%02x%02x%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
                 /*for (i=0; i<6;i++)
                 {
             	    //mac_addresses [*mac_address_cnt][i] = a[i];
 					//memcpy(mac_addresses[*mac_address_cnt][i], (char*)&a[i], sizeof(int));
 					mac_addresses [*mac_address_cnt][i] = (char*)a[i];
                 }*/
+				//syslog (LOG_INFO, "Found mac addresse %s\n", mac_addresses[*mac_address_cnt]);
 	            (*mac_address_cnt)++;
             }
             else
             {
-                syslog (LOG_INFO, "Error in configuration file at line%d\n", *mac_address_cnt);
+                syslog (LOG_INFO, "Error in configuration file at line %d : '%s'\n", *mac_address_cnt, mac_address_str);
+                //syslog (LOG_DEBUG, "a[] = %02x:%02x:%02x:%02x:%02x:%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
             }
+			// read until end of line
+			while (fgetc(fp) != '\n') {};
         }
     }
     fclose (fp);
