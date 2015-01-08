@@ -394,7 +394,10 @@ int main(int argc, char *argv[])
     }
 
 	if (init_wol_src() < 0) {
+		/* in normal execution, this code is never executed 
+		   because if there was a problem, the program has already exited */
 		syslog(LOG_INFO, "Interface %s does not exist.", g_iface);
+		exit(EXIT_FAILURE);
 	}
 	
     /* initializing wol destination */
