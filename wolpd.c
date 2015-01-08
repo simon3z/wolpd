@@ -40,16 +40,16 @@
 #endif
 
 
-#define DEFAULT_IFACE "eth0"
-#define DEFAULT_PORT  9
+#define DEFAULT_IFACE		"eth0"
+#define DEFAULT_PORT		9
 
-#define ETH_P_WOL       0x0842
-#define WOL_MAGIC_LEN   6
+#define ETH_P_WOL			0x0842
+#define WOL_MAGIC_LEN		6
 
 uint8_t wol_magic[WOL_MAGIC_LEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
-#define MAX_MAC_ADDRESSES 8192
-#define MAX_INTERFACES 16		/* 4096 is way too much */
+#define MAX_MAC_ADDRESSES	8192
+#define MAX_INTERFACES		16		/* 4096 is way too much */
 
 struct eth_frame {
     struct ethhdr       head;
@@ -321,6 +321,11 @@ int main(int argc, char *argv[])
 			syslog(LOG_INFO, "Interface %s does not exist. No need to read %s", interface_names[i], config_full_path_name);
 		}
 		i++;
+		if (i >= MAX_INTERFACES) {
+			syslog(LOG_ERR, "ERROR: you reached maximum interfaces number allowed (%d). Try to increase MAX_INTERFACES in source code, recompile and retry.", MAX_INTERFACES);
+			syslog(LOG_ERR, "ERROR: wolpd will continue with your first %d interfaces found", MAX_INTERFACES);
+			break;
+		}
 	}
 
 	/* this socket will be use for outgoing packets */
