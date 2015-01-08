@@ -176,8 +176,8 @@ int find_configfiles(char *directory, char *pattern, char *filename[]) {
  * @param	string	filename
  * @return	string	extension
  */
-const char *get_filename_ext(const char *filename) {
-    const char *dot = strrchr(filename, '.');
+char *get_filename_ext(char *filename) {
+    char *dot = strrchr(filename, '.');
     if(!dot || dot == filename) return "";
     return dot + 1;
 }
@@ -239,6 +239,40 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
 	syslog (LOG_INFO, "Found %d mac addresses in %s\n", *mac_address_cnt, config_filename);
 }
 
+/*
+ * Connect to a network interface
+ * @param	string	name of the interface as return by ifconfig
+ * @param	struct	sockaddr_ll
+ * @return	int		socket
+ */
+struct sockaddr_ll init_wol_dst(char *name) {
+	syslog(LOG_DEBUG, "Try to connect to %s interface...", name);
+	int iface_socket;
+    struct ifreq ifhw;
+	struct sockaddr_ll layer2;
+    /* initializing interface by name */
+    strncpy(ifhw.ifr_name, name, sizeof(ifhw.ifr_name));
+	memset(&layer2, 0, sizeof(layer2));
+	layer2.sll_family  = AF_PACKET;
+	layer2.sll_ifindex = ifhw.ifr_ifindex;
+	layer2.sll_halen   = ETH_ALEN;
+
+    if ((iface_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
+		syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
+		layer2.sll_ifindex = -1;
+    }
+	/* request mac address of interface to be sure it is really present */
+    if (ioctl(iface_socket, SIOCGIFHWADDR, &ifhw) < 0) {
+        syslog(LOG_ERR, "ERROR: ioctl() %s: %s", name, strerror(errno));
+		layer2.sll_ifindex = -1;
+    }
+	if (close(iface_socket) < 0) {
+		syslog(LOG_ERR, "ERROR: close() %s", strerror(errno));
+	}
+	
+	return layer2;
+}
+
 int main(int argc, char *argv[])
 {
     int ex_socket, in_socket;
@@ -247,13 +281,13 @@ int main(int argc, char *argv[])
     struct ifreq ifhw;
     struct sockaddr_in wol_src, wol_rmt;
     struct sockaddr_ll wol_dst;
-    //struct sockaddr_ll wol_dst_int[MAX_INTERFACES];
+    struct sockaddr_ll wol_dst_int[MAX_INTERFACES];
     socklen_t wol_rmt_len;
 	char *config_full_path_name = malloc(sizeof (char*) * 256);			/* temporary variable to store full path name of current config filename */
 	char *config_filenames[MAX_INTERFACES];	/* array of config filenames : 1 per interface */
 	char *mac_addresses[MAX_INTERFACES][MAX_MAC_ADDRESSES];
 	int mac_address_cnt[MAX_INTERFACES];
-	//char *interface_names[MAX_INTERFACES];
+	char *interface_names[MAX_INTERFACES];
 	unsigned int i = 0;
 
     parse_options(argc, argv);
@@ -267,14 +301,15 @@ int main(int argc, char *argv[])
 	/* search for mac addresses in config files and connect to corresponding interfaces */
 	i = 0;
 	while (config_filenames[i] != NULL) {
+		interface_names[i] = get_filename_ext(config_filenames[i]);
 		sprintf(config_full_path_name, "/etc/%s", config_filenames[i]);
-		read_config_per_interface(config_full_path_name, mac_addresses[i], &mac_address_cnt[i]);
+		wol_dst_int[i] = init_wol_dst(interface_names[i]);
+		if (wol_dst_int[i].sll_ifindex >= 0) {
+			read_config_per_interface(config_full_path_name, mac_addresses[i], &mac_address_cnt[i]);
+		} else {
+			syslog(LOG_INFO, "Interface %s does not exist. No need to read %s", interface_names[i], config_full_path_name);
+		}
 		i++;
-		/*memset(&wol_src, 0, sizeof(wol_src));
-		wol_src.sin_family      = AF_INET;
-		wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
-		wol_src.sin_port        = htons(g_port);
-		 */
 	}
 
     if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
@@ -286,6 +321,7 @@ int main(int argc, char *argv[])
         perror("couldn't open internal socket");
         goto exit_fail2;
     }
+	
 
     /* initializing wol destination */
     strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
