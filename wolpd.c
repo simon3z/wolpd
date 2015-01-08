@@ -322,12 +322,12 @@ int main(int argc, char *argv[])
 
     if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("ERROR: couldn't open external socket");
-        goto exit_fail1;
+        exit(EXIT_FAILURE);
     }
 
     if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
         perror("ERROR: couldn't open internal socket");
-        goto exit_fail2;
+        exit(EXIT_FAILURE);
     }
 	
 
@@ -336,7 +336,7 @@ int main(int argc, char *argv[])
 
     if (ioctl(in_socket, SIOCGIFINDEX, &ifhw) < 0) {
         perror("ERROR: couldn't request adapter index");
-        goto exit_fail3;
+        exit(EXIT_FAILURE);
     }
 
     memset(&wol_dst, 0, sizeof(wol_dst));
@@ -347,7 +347,7 @@ int main(int argc, char *argv[])
     /* initializing wol message */
     if (ioctl(in_socket, SIOCGIFHWADDR, &ifhw) < 0) {
         perror("ERROR: couldn't request local hwaddress");
-        goto exit_fail3;
+        exit(EXIT_FAILURE);
     }
 
     memcpy(wol_msg.head.h_source, ifhw.ifr_hwaddr.sa_data, ETH_ALEN);
@@ -360,7 +360,7 @@ int main(int argc, char *argv[])
 
     if (bind(ex_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
         perror("ERROR: couldn't bind to local interface");
-        goto exit_fail3;
+        exit(EXIT_FAILURE);
     }
 
     if (g_foregnd == 0) {
@@ -377,7 +377,7 @@ int main(int argc, char *argv[])
                 ex_socket, wol_msg.data, ETH_DATA_LEN, 0,
                     (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
             perror("ERROR: couldn't receive data from external socket");
-            goto exit_fail3;
+	        exit(EXIT_FAILURE);
         }
 
         if (wol_len < WOL_MAGIC_LEN + ETH_ALEN) {
@@ -399,7 +399,7 @@ int main(int argc, char *argv[])
                 in_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
             perror("ERROR: couldn't forward data to internal socket");
-            goto exit_fail3;
+	        exit(EXIT_FAILURE);
         }
 
         syslog(LOG_NOTICE, "magic packet from %s forwarded to "
@@ -411,13 +411,5 @@ int main(int argc, char *argv[])
         );
     }
 
-exit_fail3:
-    close(in_socket);
-
-exit_fail2:
-    close(ex_socket);
-
-exit_fail1:
-    return EXIT_FAILURE;
 }
 
