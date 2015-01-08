@@ -236,11 +236,13 @@ int main(int argc, char *argv[])
     struct ifreq ifhw;
     struct sockaddr_in wol_src, wol_rmt;
     struct sockaddr_ll wol_dst;
+    //struct sockaddr_ll wol_dst_int[MAX_INTERFACES];
     socklen_t wol_rmt_len;
 	char *config_full_path_name = malloc(sizeof (char*) * 256);			/* temporary variable to store full path name of current config filename */
 	char *config_filenames[MAX_INTERFACES];	/* array of config filenames : 1 per interface */
 	char *mac_addresses[MAX_INTERFACES][MAX_MAC_ADDRESSES];
 	int mac_address_cnt[MAX_INTERFACES];
+	//char *interface_names[MAX_INTERFACES];
 	unsigned int i = 0;
 
     parse_options(argc, argv);
@@ -251,11 +253,17 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/* search for mac addresses in config files and connect to corresponding interfaces */
 	i = 0;
 	while (config_filenames[i] != NULL) {
 		sprintf(config_full_path_name, "/etc/%s", config_filenames[i]);
 		read_config_per_interface(config_full_path_name, mac_addresses[i], &mac_address_cnt[i]);
 		i++;
+		/*memset(&wol_src, 0, sizeof(wol_src));
+		wol_src.sin_family      = AF_INET;
+		wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
+		wol_src.sin_port        = htons(g_port);
+		 */
 	}
 
     if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
