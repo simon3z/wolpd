@@ -42,6 +42,7 @@
 
 #define DEFAULT_IFACE		"eth0"
 #define DEFAULT_PORT		9
+#define DEFAULT_PIDFILE		"/var/run/wolpd.pid"
 
 #define ETH_P_WOL			0x0842
 #define WOL_MAGIC_LEN		6
@@ -64,6 +65,7 @@ enum { false, true };
 char		*g_iface	= DEFAULT_IFACE;
 uint16_t	g_port		= DEFAULT_PORT;
 int			g_foregnd	= 0;
+char		*g_pidfile	= DEFAULT_PIDFILE;
 bool		g_debug		= false;
 
 
@@ -398,7 +400,7 @@ int main(int argc, char *argv[])
 
 	if (init_wol_src() < 0) {
 		/* in normal execution, this code is never executed 
-		   because if there was a problem, the program has already exited */
+		 * because if there was a problem, the program has already exited */
 		syslog(LOG_INFO, "Interface %s does not exist.", g_iface);
 		exit(EXIT_FAILURE);
 	}
@@ -436,12 +438,33 @@ int main(int argc, char *argv[])
     }*/
 
     if (g_foregnd == 0) {
+		if (g_debug) syslog(LOG_DEBUG, "DBG: daemonize()");
 		if (daemon(0, 0) < 0) {
 			syslog(LOG_ERR, "ERROR: daemon() %d: %s", errno, strerror(errno));
 			perror("ERROR: cannot daemonize");
 		};
 	}
-
+	
+	/* 
+	 * AFTER THIS POINT, DO NOT USE perror() AS WE POSSIBLY ARE A DAEMON
+	 * USE syslog() INSTEAD 
+	 */
+	
+	/* daemon or not, display and write pid to file */
+	if (g_debug) syslog(LOG_DEBUG, "DBG: get pid %d", getpid());
+	FILE *pid_file = fopen(g_pidfile, "w+");
+	if (pid_file < 0) {
+		syslog(LOG_ERR, "ERROR: unable to open() %s: %d: %s", g_pidfile, errno, strerror(errno));
+	} else {
+		if (fprintf(pid_file, "%d\n", getpid()) < 0) {
+			syslog(LOG_WARNING, "WARN: unable to write to %s: %d: %s", g_pidfile, errno, strerror(errno));
+		}
+		if (fclose(pid_file) < 0) {
+			syslog(LOG_WARNING, "WARN: unable to close() %s: %d: %s", g_pidfile, errno, strerror(errno));
+		}
+		
+	}
+	
     while (1)
     {
         wol_rmt_len = sizeof(wol_rmt);
