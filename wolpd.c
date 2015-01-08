@@ -155,7 +155,7 @@ int find_configfiles(char *directory, char *pattern, char *filename[]) {
     dir = opendir(directory);
     if (!dir) {
 		//fprintf(stderr, "Cannot read directory '%s': ", cwd);
-		syslog(LOG_INFO, "ERROR: Opening directory '%s' failed with error '%s'\n", directory, strerror(errno));
+		syslog(LOG_ERR, "ERROR: Opening directory '%s' failed with error '%s'\n", directory, strerror(errno));
 		exit(EXIT_FAILURE);
     }
 	
@@ -164,7 +164,7 @@ int find_configfiles(char *directory, char *pattern, char *filename[]) {
 	while ((entry = readdir(dir))) {
 		if (entry->d_name && strstr(entry->d_name, pattern)) {
 			filename[i] = entry->d_name;
-			syslog(LOG_INFO, "Found %s file", filename[i]);
+			//syslog(LOG_DEBUG, "Found %s file", filename[i]);
 			i++;
 			//printf("%s/%s\n", cwd, entry->d_name);
 		}
@@ -197,7 +197,7 @@ char *get_filename_ext(char *filename) {
  * @param	int		count of mac addresses read
  */
 void read_config_per_interface(char *config_filename, char *mac_addresses[], int *mac_address_cnt) {
-	syslog (LOG_INFO, "Try to read %s\n", config_filename);
+	if (g_debug) syslog(LOG_DEBUG, "Try to read %s\n", config_filename);
     FILE *fp;
     //char mac_address_str [17];
 	char *mac_address_str = malloc(sizeof (char*) * 18);
@@ -254,7 +254,7 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
  * @return	int		socket
  */
 struct sockaddr_ll init_wol_dst(char *name) {
-	syslog(LOG_DEBUG, "Try to connect to %s interface...", name);
+	if (g_debug) syslog(LOG_DEBUG, "Try to connect to %s interface...", name);
 	int iface_socket;
     struct ifreq ifhw;
 	struct sockaddr_ll layer2;
@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
 
 	/* search for list of mac address per vlan in configuration files */
 	if (find_configfiles("/etc", "wolpd.", config_filenames) < 0) {
-		perror("No config filenames found in /etc");
+		perror("ERROR: No config filenames found in /etc");
 		exit(EXIT_FAILURE);
 	}
 
@@ -321,12 +321,12 @@ int main(int argc, char *argv[])
 	}
 
     if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-        perror("couldn't open external socket");
+        perror("ERROR: couldn't open external socket");
         goto exit_fail1;
     }
 
     if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
-        perror("couldn't open internal socket");
+        perror("ERROR: couldn't open internal socket");
         goto exit_fail2;
     }
 	
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
     strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
 
     if (ioctl(in_socket, SIOCGIFINDEX, &ifhw) < 0) {
-        perror("couldn't request adapter index");
+        perror("ERROR: couldn't request adapter index");
         goto exit_fail3;
     }
 
@@ -346,7 +346,7 @@ int main(int argc, char *argv[])
 
     /* initializing wol message */
     if (ioctl(in_socket, SIOCGIFHWADDR, &ifhw) < 0) {
-        perror("couldn't request local hwaddress");
+        perror("ERROR: couldn't request local hwaddress");
         goto exit_fail3;
     }
 
@@ -359,7 +359,7 @@ int main(int argc, char *argv[])
     wol_src.sin_port        = htons(g_port);
 
     if (bind(ex_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
-        perror("couldn't bind to local interface");
+        perror("ERROR: couldn't bind to local interface");
         goto exit_fail3;
     }
 
@@ -376,7 +376,7 @@ int main(int argc, char *argv[])
         if ((wol_len = recvfrom(
                 ex_socket, wol_msg.data, ETH_DATA_LEN, 0,
                     (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
-            perror("couldn't receive data from external socket");
+            perror("ERROR: couldn't receive data from external socket");
             goto exit_fail3;
         }
 
@@ -398,7 +398,7 @@ int main(int argc, char *argv[])
         if ((wol_len = sendto(
                 in_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
-            perror("couldn't forward data to internal socket");
+            perror("ERROR: couldn't forward data to internal socket");
             goto exit_fail3;
         }
 
