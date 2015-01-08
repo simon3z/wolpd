@@ -211,12 +211,12 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
 					//memcpy(mac_addresses[*mac_address_cnt][i], (char*)&a[i], sizeof(int));
 					mac_addresses [*mac_address_cnt][i] = (char*)a[i];
                 }*/
+	            (*mac_address_cnt)++;
             }
             else
             {
                 syslog (LOG_INFO, "Error in configuration file at line%d\n", *mac_address_cnt);
             }
-            (*mac_address_cnt)++;
         }
     }
     fclose (fp);
