@@ -25,6 +25,7 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netpacket/packet.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,9 +72,22 @@ bool		g_debug		= false;
 /*
  * Try to clean som stuff left around
  */
-void on_exit() {
+void onExit() {
 	/* delete pid file */
 	unlink(g_pidfile);
+}
+
+void register_signals() {
+	/* register signals */
+    struct sigaction action;
+    memset(&action, 0, sizeof(struct sigaction));
+    action.sa_handler = onExit;
+    sigaction(SIGHUP, &action, NULL);
+    sigaction(SIGINT, &action, NULL);
+    sigaction(SIGTERM, &action, NULL);
+	
+	/* register the 'on exit' event */
+	atexit(onExit);
 }
 
 void version_and_exit()
@@ -365,8 +379,8 @@ int main(int argc, char *argv[])
 
     parse_options(argc, argv);
 	
-	/* register an on exit function */
-	atexit(on_exit);
+	/* register on exit and signals function */
+	register_signals();
 	
 	/* search for list of mac address per vlan in configuration files 
 	 * config file must be named /etc/wolpd.${interface_name}
