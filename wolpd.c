@@ -491,12 +491,14 @@ int main(int argc, char *argv[])
 	
     while (1)
     {
+		syslog(LOG_DEBUG, "Waiting for incoming magic packets");
         wol_rmt_len = sizeof(wol_rmt);
 
         if ((wol_len = recvfrom(
                 in_socket, wol_msg.data, ETH_DATA_LEN, 0,
                     (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
-            perror("ERROR: couldn't receive data from incoming socket");
+            //perror("ERROR: couldn't receive data from incoming socket");
+			syslog(LOG_ERR,"ERROR: recvfrom() %d: %s", errno, strerror(errno));
 	        exit(EXIT_FAILURE);
         }
 
@@ -518,7 +520,8 @@ int main(int argc, char *argv[])
         if ((wol_len = sendto(
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
-            perror("ERROR: couldn't forward data to outgoing socket");
+            //perror("ERROR: couldn't forward data to outgoing socket");
+			syslog(LOG_ERR,"ERROR: sendto() %d: %s", errno, strerror(errno));
 	        exit(EXIT_FAILURE);
         }
 
