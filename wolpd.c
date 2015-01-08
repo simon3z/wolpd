@@ -111,7 +111,7 @@ void parse_options(int argc, char *argv[])
             {NULL, 0, NULL, 0}
         };
 
-        if ((c = getopt_long(argc, argv, "hvi:f",
+        if ((c = getopt_long(argc, argv, "hvifpd",
                      long_options, &option_index)) == -1) break;
 
         switch (c) {
