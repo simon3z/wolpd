@@ -431,7 +431,8 @@ int main(int argc, char *argv[])
 
     if (g_foregnd == 0) {
 		if (daemon(0, 0) < 0) {
-			perror(strerror(errno));
+			syslog(LOG_ERR, "ERROR: daemon() %d: %s", errno, strerror(errno));
+			perror("ERROR: cannot daemonize");
 		};
 	}
 
