@@ -362,7 +362,7 @@ int init_wol_src() {
 
 int main(int argc, char *argv[])
 {
-    int ex_socket, in_socket;
+    int out_socket, in_socket;
     struct eth_frame wol_msg;
     ssize_t wol_len;
     struct ifreq ifhw;
@@ -411,7 +411,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* this socket will be use for outgoing packets */
-    if ((ex_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+    if ((out_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("ERROR: couldn't open external socket");
         exit(EXIT_FAILURE);
     }
@@ -456,7 +456,7 @@ int main(int argc, char *argv[])
     wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
     wol_src.sin_port        = htons(g_port);
 
-    /*if (bind(ex_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
+    /*if (bind(out_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
         perror("ERROR: couldn't bind to local interface");
         exit(EXIT_FAILURE);
     }*/
@@ -494,9 +494,9 @@ int main(int argc, char *argv[])
         wol_rmt_len = sizeof(wol_rmt);
 
         if ((wol_len = recvfrom(
-                ex_socket, wol_msg.data, ETH_DATA_LEN, 0,
+                in_socket, wol_msg.data, ETH_DATA_LEN, 0,
                     (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
-            perror("ERROR: couldn't receive data from external socket");
+            perror("ERROR: couldn't receive data from incoming socket");
 	        exit(EXIT_FAILURE);
         }
 
@@ -516,9 +516,9 @@ int main(int argc, char *argv[])
         memcpy(wol_dst.sll_addr, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
 
         if ((wol_len = sendto(
-                in_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
+                out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
-            perror("ERROR: couldn't forward data to internal socket");
+            perror("ERROR: couldn't forward data to outgoing socket");
 	        exit(EXIT_FAILURE);
         }
 
