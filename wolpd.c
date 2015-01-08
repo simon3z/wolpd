@@ -56,11 +56,15 @@ struct eth_frame {
     uint8_t             data[ETH_DATA_LEN];
 };
 
+/* create bool type */
+typedef int bool;
+enum { false, true };
 
 /* global options */
-char     *g_iface    = DEFAULT_IFACE;
-uint16_t  g_port     = DEFAULT_PORT;
-int       g_foregnd  = 0;
+char		*g_iface	= DEFAULT_IFACE;
+uint16_t	g_port		= DEFAULT_PORT;
+int			g_foregnd	= 0;
+bool		g_debug		= false;
 
 
 void version_and_exit()
@@ -103,6 +107,7 @@ void parse_options(int argc, char *argv[])
     while (1) {
         int option_index = 0;
         static struct option long_options[] = {
+			{"debug", 0, 0, 'd'},
             {"help", 0, 0, 'h'},
             {"version", 0, 0, 'v'},
             {"foreground", 0, 0, 'f'},
@@ -115,6 +120,9 @@ void parse_options(int argc, char *argv[])
                      long_options, &option_index)) == -1) break;
 
         switch (c) {
+			case 'd':
+				g_debug = true;
+				break;
             case 'h':
                 usage_and_exit();
                 break;
