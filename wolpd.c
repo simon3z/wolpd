@@ -68,6 +68,13 @@ int			g_foregnd	= 0;
 char		*g_pidfile	= DEFAULT_PIDFILE;
 bool		g_debug		= false;
 
+/*
+ * Try to clean som stuff left around
+ */
+void on_exit() {
+	/* delete pid file */
+	unlink(g_pidfile);
+}
 
 void version_and_exit()
 {
@@ -357,6 +364,9 @@ int main(int argc, char *argv[])
 	unsigned int i = 0;
 
     parse_options(argc, argv);
+	
+	/* register an on exit function */
+	atexit(on_exit);
 	
 	/* search for list of mac address per vlan in configuration files 
 	 * config file must be named /etc/wolpd.${interface_name}
