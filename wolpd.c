@@ -292,6 +292,7 @@ int init_wol_src() {
     struct ifreq ifhw;
     struct sockaddr_in wol_src;
 	int in_socket;
+	const int optVal = 1;
 	char *ip_address = malloc(sizeof (char*) * INET_ADDRSTRLEN);
 
 	/*  create the socket */
@@ -299,6 +300,8 @@ int init_wol_src() {
 		syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
+	//setsockopt(in_socket, SOL_SOCKET, SO_REUSEADDR, (void*) &optVal, optLen);
+	setsockopt(in_socket, SOL_SOCKET, SO_REUSEADDR, (void*) &optVal, sizeof(optVal));
 	
 	/* initialize interface by name */
     memset(&ifhw, 0, sizeof(struct ifreq));
@@ -322,6 +325,10 @@ int init_wol_src() {
     if (bind(in_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
 		syslog(LOG_ERR, "ERROR: bind() %d: %s", errno, strerror(errno));
         perror("ERROR: couldn't bind to local interface");
+		if (close(in_socket) < 0) {
+			syslog(LOG_ERR, "ERROR: close() %d: %s", errno, strerror(errno));
+			perror("ERROR: couldn't close socket");
+		}
         exit(EXIT_FAILURE);
     }
 	return in_socket;
@@ -345,7 +352,7 @@ int main(int argc, char *argv[])
 	unsigned int i = 0;
 
     parse_options(argc, argv);
-
+	
 	/* search for list of mac address per vlan in configuration files 
 	 * config file must be named /etc/wolpd.${interface_name}
 	 */
