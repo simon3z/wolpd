@@ -17,7 +17,7 @@
  */
 
 #include <arpa/inet.h>
-#include <dirent.h>				/* readdir(), etc.                    */
+#include <dirent.h>                /* readdir(), etc.                    */
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -41,17 +41,17 @@
 #endif
 
 
-#define DEFAULT_IFACE		"eth0"
-#define DEFAULT_PORT		9
-#define DEFAULT_PIDFILE		"/var/run/wolpd.pid"
+#define DEFAULT_IFACE       "eth0"
+#define DEFAULT_PORT        9
+#define DEFAULT_PIDFILE     "/var/run/wolpd.pid"
 
-#define ETH_P_WOL			0x0842
-#define WOL_MAGIC_LEN		6
+#define ETH_P_WOL           0x0842
+#define WOL_MAGIC_LEN       6
 
 uint8_t wol_magic[WOL_MAGIC_LEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
-#define MAX_MAC_ADDRESSES	8192
-#define MAX_INTERFACES		16		/* 4096 is way too much */
+#define MAX_MAC_ADDRESSES   8192
+#define MAX_INTERFACES      16        /* 4096 is way too much */
 
 struct eth_frame {
     struct ethhdr       head;
@@ -63,31 +63,32 @@ typedef int bool;
 enum { false, true };
 
 /* global options */
-char		*g_iface	= DEFAULT_IFACE;
-uint16_t	g_port		= DEFAULT_PORT;
-int			g_foregnd	= 0;
-char		*g_pidfile	= DEFAULT_PIDFILE;
-bool		g_debug		= false;
+char        *g_iface    = DEFAULT_IFACE;
+uint16_t    g_port      = DEFAULT_PORT;
+int         g_foregnd   = 0;
+char        *g_pidfile  = DEFAULT_PIDFILE;
+bool        g_debug     = false;
 
 /*
  * Try to clean som stuff left around
  */
 void onExit() {
-	/* delete pid file */
-	unlink(g_pidfile);
+    syslog(LOG_INFO, "Daemon exiting...");
+    /* delete pid file */
+    unlink(g_pidfile);
 }
 
 void register_signals() {
-	/* register signals */
+    /* register signals */
     struct sigaction action;
     memset(&action, 0, sizeof(struct sigaction));
     action.sa_handler = onExit;
     sigaction(SIGHUP, &action, NULL);
     sigaction(SIGINT, &action, NULL);
     sigaction(SIGTERM, &action, NULL);
-	
-	/* register the 'on exit' event */
-	atexit(onExit);
+    
+    /* register the 'on exit' event */
+    //atexit(onExit);
 }
 
 void version_and_exit()
@@ -130,7 +131,7 @@ void parse_options(int argc, char *argv[])
     while (1) {
         int option_index = 0;
         static struct option long_options[] = {
-			{"debug", 0, 0, 'd'},
+            {"debug", 0, 0, 'd'},
             {"help", 0, 0, 'h'},
             {"version", 0, 0, 'v'},
             {"foreground", 0, 0, 'f'},
@@ -143,9 +144,9 @@ void parse_options(int argc, char *argv[])
                      long_options, &option_index)) == -1) break;
 
         switch (c) {
-			case 'd':
-				g_debug = true;
-				break;
+            case 'd':
+                g_debug = true;
+                break;
             case 'h':
                 usage_and_exit();
                 break;
@@ -164,48 +165,48 @@ void parse_options(int argc, char *argv[])
 
 /*
  * Find files based on pattern
- * @param	string	directory to search in
- * @param	string	pattern to match to
- * @param	array	list of files that match pattern
- * @return	int		-1 on failure
+ * @param   string      directory to search in
+ * @param   string      pattern to match to
+ * @param   array       list of files that match pattern
+ * @return  int         -1 on failure
  */
 int find_configfiles(char *directory, char *pattern, char *filename[]) {
-	DIR *dir;				/* pointer to the scanned directory. */
-	struct dirent* entry;	/* pointer to one directory entry.   */
-	unsigned int i = 0;
-	
-	/* open the directory for reading */
+    DIR *dir;                /* pointer to the scanned directory. */
+    struct dirent* entry;    /* pointer to one directory entry.   */
+    unsigned int i = 0;
+    
+    /* open the directory for reading */
     dir = opendir(directory);
     if (!dir) {
-		//fprintf(stderr, "Cannot read directory '%s': ", cwd);
-		syslog(LOG_ERR, "ERROR: Opening directory '%s' failed with error '%s'\n", directory, strerror(errno));
-		exit(EXIT_FAILURE);
+        //fprintf(stderr, "Cannot read directory '%s': ", cwd);
+        syslog(LOG_ERR, "ERROR: Opening directory '%s' failed with error '%s'\n", directory, strerror(errno));
+        exit(EXIT_FAILURE);
     }
-	
-	/* scan the directory, */
+    
+    /* scan the directory, */
     /* matching the pattern for each file name.               */
-	while ((entry = readdir(dir))) {
-		if (entry->d_name && strstr(entry->d_name, pattern)) {
-			filename[i] = entry->d_name;
-			//syslog(LOG_DEBUG, "Found %s file", filename[i]);
-			i++;
-			//printf("%s/%s\n", cwd, entry->d_name);
-		}
-	}
-	/* add the last entry "NULL". We will use it further to check the end of array */
-	filename[i] = NULL;
-	
-	if (i == 0) { // no match were found so, no file found
-		return -1;
-	} else {
-		return 0;
-	}
+    while ((entry = readdir(dir))) {
+        if (entry->d_name && strstr(entry->d_name, pattern)) {
+            filename[i] = entry->d_name;
+            //syslog(LOG_DEBUG, "Found %s file", filename[i]);
+            i++;
+            //printf("%s/%s\n", cwd, entry->d_name);
+        }
+    }
+    /* add the last entry "NULL". We will use it further to check the end of array */
+    filename[i] = NULL;
+    
+    if (i == 0) { // no match were found so, no file found
+        return -1;
+    } else {
+        return 0;
+    }
 }
 
 /*
  * get the extension of a filename
- * @param	string	filename
- * @return	string	extension
+ * @param   string      filename
+ * @return  string      extension
  */
 char *get_filename_ext(char *filename) {
     char *dot = strrchr(filename, '.');
@@ -215,18 +216,18 @@ char *get_filename_ext(char *filename) {
 
 /*
  * Read config file and store data in arrays
- * @param	string	config filename to read
- * @param	array	array of mac addresses read
- * @param	int		count of mac addresses read
+ * @param    string     config filename to read
+ * @param    array      array of mac addresses read
+ * @param    int        count of mac addresses read
  */
 void read_config_per_interface(char *config_filename, char *mac_addresses[], int *mac_address_cnt) {
-	if (g_debug) syslog(LOG_DEBUG, "Try to read %s\n", config_filename);
+    if (g_debug) syslog(LOG_DEBUG, "Try to read %s\n", config_filename);
     FILE *fp;
     //char mac_address_str [17];
-	char *mac_address_str = malloc(sizeof (char*) * 18);
-	//int i;
+    char *mac_address_str = malloc(sizeof (char*) * 18);
+    //int i;
 
-	/* Open and read in the MAC addresses from the configuration file */
+    /* Open and read in the MAC addresses from the configuration file */
     if ((fp = fopen (config_filename, "r")) == NULL)
     {
         sleep (1);
@@ -240,124 +241,124 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
         while ((fgets (mac_address_str, 18, fp) != NULL) && (*mac_address_cnt < MAX_MAC_ADDRESSES))
         {
             int a[6];
-			//unsigned int a[6];
-			//if (sscanf(mac_address_str, "%02X:%02X:%02X:%02X:%02X:%02X", &a[0], &a[1], &a[2], &a[3], &a[4], &a[5]) == 6)
-			if (sscanf(mac_address_str, "%02x:%02x:%02x:%02x:%02x:%02x", &a[0], &a[1], &a[2], &a[3], &a[4], &a[5]) == 6)
+            //unsigned int a[6];
+            //if (sscanf(mac_address_str, "%02X:%02X:%02X:%02X:%02X:%02X", &a[0], &a[1], &a[2], &a[3], &a[4], &a[5]) == 6)
+            if (sscanf(mac_address_str, "%02x:%02x:%02x:%02x:%02x:%02x", &a[0], &a[1], &a[2], &a[3], &a[4], &a[5]) == 6)
             {
-				char *mac_address_compressed = malloc(sizeof (char*) * 12);		/* mac address without : char is 12 char long) */
-				mac_addresses[*mac_address_cnt] = malloc(sizeof (char*) * 12);
-				sprintf(mac_address_compressed, "%02x%02x%02x%02x%02x%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
-				sprintf(mac_addresses[*mac_address_cnt], "%02x%02x%02x%02x%02x%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
+                char *mac_address_compressed = malloc(sizeof (char*) * 12);        /* mac address without : char is 12 char long) */
+                mac_addresses[*mac_address_cnt] = malloc(sizeof (char*) * 12);
+                sprintf(mac_address_compressed, "%02x%02x%02x%02x%02x%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
+                sprintf(mac_addresses[*mac_address_cnt], "%02x%02x%02x%02x%02x%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
                 /*for (i=0; i<6;i++)
                 {
-            	    //mac_addresses [*mac_address_cnt][i] = a[i];
-					//memcpy(mac_addresses[*mac_address_cnt][i], (char*)&a[i], sizeof(int));
-					mac_addresses [*mac_address_cnt][i] = (char*)a[i];
+                    //mac_addresses [*mac_address_cnt][i] = a[i];
+                    //memcpy(mac_addresses[*mac_address_cnt][i], (char*)&a[i], sizeof(int));
+                    mac_addresses [*mac_address_cnt][i] = (char*)a[i];
                 }*/
-				//syslog (LOG_INFO, "Found mac addresse %s\n", mac_addresses[*mac_address_cnt]);
-	            (*mac_address_cnt)++;
+                //syslog (LOG_INFO, "Found mac addresse %s\n", mac_addresses[*mac_address_cnt]);
+                (*mac_address_cnt)++;
             }
             else
             {
                 syslog (LOG_INFO, "Error in configuration file at line %d : '%s'\n", *mac_address_cnt, mac_address_str);
                 //syslog (LOG_DEBUG, "a[] = %02x:%02x:%02x:%02x:%02x:%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
             }
-			// read until end of line
-			while (fgetc(fp) != '\n') {};
+            // read until end of line
+            while (fgetc(fp) != '\n') {};
         }
     }
     fclose (fp);
-	syslog (LOG_INFO, "Found %d mac addresses in %s\n", *mac_address_cnt, config_filename);
+    syslog (LOG_INFO, "Found %d mac addresses in %s\n", *mac_address_cnt, config_filename);
 }
 
 /*
  * Initialize outgoing interfaces
- * @param	string	name of the interface as return by ifconfig
- * @param	struct	sockaddr_ll
- * @return	int		socket
+ * @param   string      name of the interface as return by ifconfig
+ * @param   struct      sockaddr_ll
+ * @return  int         socket
  */
 struct sockaddr_ll init_wol_dst(char *name) {
-	if (g_debug) syslog(LOG_DEBUG, "Try to connect to %s interface...", name);
-	int iface_socket;
+    if (g_debug) syslog(LOG_DEBUG, "Try to connect to %s interface...", name);
+    int iface_socket;
     struct ifreq ifhw;
-	struct sockaddr_ll layer2;
+    struct sockaddr_ll layer2;
     /* initializing interface by name */
     strncpy(ifhw.ifr_name, name, sizeof(ifhw.ifr_name));
-	memset(&layer2, 0, sizeof(layer2));
-	layer2.sll_family  = AF_PACKET;
-	layer2.sll_ifindex = ifhw.ifr_ifindex;
-	layer2.sll_halen   = ETH_ALEN;
+    memset(&layer2, 0, sizeof(layer2));
+    layer2.sll_family  = AF_PACKET;
+    layer2.sll_ifindex = ifhw.ifr_ifindex;
+    layer2.sll_halen   = ETH_ALEN;
 
-	/* create a socket */
+    /* create a socket */
     if ((iface_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
-		syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
-		layer2.sll_ifindex = -1;
+        syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
+        layer2.sll_ifindex = -1;
     }
-	/* request mac address of interface to be sure it is really present */
+    /* request mac address of interface to be sure it is really present */
     if (ioctl(iface_socket, SIOCGIFHWADDR, &ifhw) < 0) {
         syslog(LOG_ERR, "ERROR: ioctl() %s: %s", name, strerror(errno));
-		layer2.sll_ifindex = -1;
+        layer2.sll_ifindex = -1;
     }
-	/* close socket */
-	if (close(iface_socket) < 0) {
-		syslog(LOG_ERR, "ERROR: close() %s", strerror(errno));
-	}
-	
-	return layer2;
+    /* close socket */
+    if (close(iface_socket) < 0) {
+        syslog(LOG_ERR, "ERROR: close() %s", strerror(errno));
+    }
+    
+    return layer2;
 }
 
 /*
  * Initialize incoming interface and bind to it
- * @return	int		incoming socket
+ * @return    int        incoming socket
  */
 int init_wol_src() {
-	if (g_debug) syslog(LOG_DEBUG, "Try to bind to %s interface...", g_iface);
+    if (g_debug) syslog(LOG_DEBUG, "Try to bind to %s interface...", g_iface);
     struct ifreq ifhw;
     struct sockaddr_in wol_src;
-	int in_socket;
-	const int optVal = 1;
-	char *ip_address = malloc(sizeof (char*) * INET_ADDRSTRLEN);
+    int in_socket;
+    const int optVal = 1;
+    char *ip_address = malloc(sizeof (char*) * INET_ADDRSTRLEN);
 
-	/*  create the socket */
-	//if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
-	if ((in_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-		syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
-		perror("ERROR: socket() ");
+    /*  create the socket */
+    //if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
+    if ((in_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
+        perror("ERROR: socket() ");
         exit(EXIT_FAILURE);
     }
-	//setsockopt(in_socket, SOL_SOCKET, SO_REUSEADDR, (void*) &optVal, optLen);
-	setsockopt(in_socket, SOL_SOCKET, SO_REUSEADDR, (void*) &optVal, sizeof(optVal));
-	
-	/* initialize interface by name */
+    //setsockopt(in_socket, SOL_SOCKET, SO_REUSEADDR, (void*) &optVal, optLen);
+    setsockopt(in_socket, SOL_SOCKET, SO_REUSEADDR, (void*) &optVal, sizeof(optVal));
+    
+    /* initialize interface by name */
     memset(&ifhw, 0, sizeof(struct ifreq));
     ifhw.ifr_addr.sa_family = AF_INET;
     strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
     if (ioctl(in_socket, SIOCGIFADDR, &ifhw) == -1) {
         syslog(LOG_ERR, "ERROR: ioctl() %s: %s", g_iface, strerror(errno));
-		perror("ERROR: ioctl() ");
-		exit(EXIT_FAILURE);
-    }
-	
-	/* get ipaddress */
-	inet_ntop(AF_INET, &ifhw.ifr_addr.sa_data[2], ip_address, INET_ADDRSTRLEN);
-	syslog(LOG_INFO, "Found address %s at %s", ip_address, g_iface);
-	memset(&wol_src, 0, sizeof(wol_src));
-	wol_src.sin_family      = AF_INET;
-	//wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
-	wol_src.sin_addr.s_addr = inet_addr(ip_address);
-	wol_src.sin_port        = htons(g_port);
-	
-	/* bind socket to interface */
-    if (bind(in_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
-		syslog(LOG_ERR, "ERROR: bind() %d: %s", errno, strerror(errno));
-        perror("ERROR: couldn't bind to local interface");
-		if (close(in_socket) < 0) {
-			syslog(LOG_ERR, "ERROR: close() %d: %s", errno, strerror(errno));
-			perror("ERROR: couldn't close socket");
-		}
+        perror("ERROR: ioctl() ");
         exit(EXIT_FAILURE);
     }
-	return in_socket;
+    
+    /* get ipaddress */
+    inet_ntop(AF_INET, &ifhw.ifr_addr.sa_data[2], ip_address, INET_ADDRSTRLEN);
+    syslog(LOG_INFO, "Found address %s at %s", ip_address, g_iface);
+    memset(&wol_src, 0, sizeof(wol_src));
+    wol_src.sin_family      = AF_INET;
+    //wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
+    wol_src.sin_addr.s_addr = inet_addr(ip_address);
+    wol_src.sin_port        = htons(g_port);
+    
+    /* bind socket to interface */
+    if (bind(in_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
+        syslog(LOG_ERR, "ERROR: bind() %d: %s", errno, strerror(errno));
+        perror("ERROR: couldn't bind to local interface");
+        if (close(in_socket) < 0) {
+            syslog(LOG_ERR, "ERROR: close() %d: %s", errno, strerror(errno));
+            perror("ERROR: couldn't close socket");
+        }
+        exit(EXIT_FAILURE);
+    }
+    return in_socket;
 }
 
 int main(int argc, char *argv[])
@@ -370,65 +371,65 @@ int main(int argc, char *argv[])
     struct sockaddr_ll wol_dst;
     struct sockaddr_ll wol_dst_int[MAX_INTERFACES];
     socklen_t wol_rmt_len;
-	char *config_full_path_name = malloc(sizeof (char*) * 256);			/* temporary variable to store full path name of current config filename */
-	char *config_filenames[MAX_INTERFACES];	/* array of config filenames : 1 per interface */
-	char *mac_addresses[MAX_INTERFACES][MAX_MAC_ADDRESSES];
-	int mac_address_cnt[MAX_INTERFACES];
-	char *interface_names[MAX_INTERFACES];
-	unsigned int i = 0;
+    char *config_full_path_name = malloc(sizeof (char*) * 256);            /* temporary variable to store full path name of current config filename */
+    char *config_filenames[MAX_INTERFACES];    /* array of config filenames : 1 per interface */
+    char *mac_addresses[MAX_INTERFACES][MAX_MAC_ADDRESSES];
+    int mac_address_cnt[MAX_INTERFACES];
+    char *interface_names[MAX_INTERFACES];
+    unsigned int i = 0;
 
     parse_options(argc, argv);
-	
-	/* register on exit and signals function */
-	register_signals();
-	
-	/* search for list of mac address per vlan in configuration files 
-	 * config file must be named /etc/wolpd.${interface_name}
-	 */
-	if (find_configfiles("/etc", "wolpd.", config_filenames) < 0) {
-		perror("ERROR: No config filenames found in /etc");
-		exit(EXIT_FAILURE);
-	}
+    
+    /* register on exit and signals function */
+    register_signals();
+    
+    /* search for list of mac address per vlan in configuration files 
+     * config file must be named /etc/wolpd.${interface_name}
+     */
+    if (find_configfiles("/etc", "wolpd.", config_filenames) < 0) {
+        perror("ERROR: No config filenames found in /etc");
+        exit(EXIT_FAILURE);
+    }
 
-	/* try to connect to interface to see if it exist
-	 * and if so, load list of mac addresses from config files */
-	i = 0;
-	while (config_filenames[i] != NULL) {
-		interface_names[i] = get_filename_ext(config_filenames[i]);
-		sprintf(config_full_path_name, "/etc/%s", config_filenames[i]);
-		wol_dst_int[i] = init_wol_dst(interface_names[i]);
-		if (wol_dst_int[i].sll_ifindex >= 0) {
-			read_config_per_interface(config_full_path_name, mac_addresses[i], &mac_address_cnt[i]);
-		} else {
-			syslog(LOG_INFO, "Interface %s does not exist. No need to read %s", interface_names[i], config_full_path_name);
-		}
-		i++;
-		if (i >= MAX_INTERFACES) {
-			syslog(LOG_ERR, "ERROR: you reached maximum interfaces number allowed (%d). Try to increase MAX_INTERFACES in source code, recompile and retry.", MAX_INTERFACES);
-			syslog(LOG_ERR, "ERROR: wolpd will continue with your first %d interfaces found", MAX_INTERFACES);
-			break;
-		}
-	}
+    /* try to connect to interface to see if it exist
+     * and if so, load list of mac addresses from config files */
+    i = 0;
+    while (config_filenames[i] != NULL) {
+        interface_names[i] = get_filename_ext(config_filenames[i]);
+        sprintf(config_full_path_name, "/etc/%s", config_filenames[i]);
+        wol_dst_int[i] = init_wol_dst(interface_names[i]);
+        if (wol_dst_int[i].sll_ifindex >= 0) {
+            read_config_per_interface(config_full_path_name, mac_addresses[i], &mac_address_cnt[i]);
+        } else {
+            syslog(LOG_INFO, "Interface %s does not exist. No need to read %s", interface_names[i], config_full_path_name);
+        }
+        i++;
+        if (i >= MAX_INTERFACES) {
+            syslog(LOG_ERR, "ERROR: you reached maximum interfaces number allowed (%d). Try to increase MAX_INTERFACES in source code, recompile and retry.", MAX_INTERFACES);
+            syslog(LOG_ERR, "ERROR: wolpd will continue with your first %d interfaces found", MAX_INTERFACES);
+            break;
+        }
+    }
 
-	/* this socket will be use for outgoing packets */
+    /* this socket will be use for outgoing packets */
     if ((out_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("ERROR: couldn't open external socket");
         exit(EXIT_FAILURE);
     }
 
-	/* this socket will be use for incoming packets */
+    /* this socket will be use for incoming packets */
     if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
         perror("ERROR: couldn't open internal socket");
         exit(EXIT_FAILURE);
     }
 
-	if (init_wol_src() < 0) {
-		/* in normal execution, this code is never executed 
-		 * because if there was a problem, the program has already exited */
-		syslog(LOG_INFO, "Interface %s does not exist.", g_iface);
-		exit(EXIT_FAILURE);
-	}
-	
+    if (init_wol_src() < 0) {
+        /* in normal execution, this code is never executed 
+         * because if there was a problem, the program has already exited */
+        syslog(LOG_INFO, "Interface %s does not exist.", g_iface);
+        exit(EXIT_FAILURE);
+    }
+    
     /* initializing wol destination */
     strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
 
@@ -462,44 +463,44 @@ int main(int argc, char *argv[])
     }*/
 
     if (g_foregnd == 0) {
-		if (g_debug) syslog(LOG_DEBUG, "DBG: daemonize()");
-		if (daemon(0, 0) < 0) {
-			syslog(LOG_ERR, "ERROR: daemon() %d: %s", errno, strerror(errno));
-			perror("ERROR: cannot daemonize");
-		};
-	}
-	
-	/* 
-	 * AFTER THIS POINT, DO NOT USE perror() AS WE POSSIBLY ARE A DAEMON
-	 * USE syslog() INSTEAD 
-	 */
-	
-	/* daemon or not, display and write pid to file */
-	if (g_debug) syslog(LOG_DEBUG, "DBG: get pid %d", getpid());
-	FILE *pid_file = fopen(g_pidfile, "w+");
-	if (pid_file < 0) {
-		syslog(LOG_ERR, "ERROR: unable to open() %s: %d: %s", g_pidfile, errno, strerror(errno));
-	} else {
-		if (fprintf(pid_file, "%d\n", getpid()) < 0) {
-			syslog(LOG_WARNING, "WARN: unable to write to %s: %d: %s", g_pidfile, errno, strerror(errno));
-		}
-		if (fclose(pid_file) < 0) {
-			syslog(LOG_WARNING, "WARN: unable to close() %s: %d: %s", g_pidfile, errno, strerror(errno));
-		}
-		
-	}
-	
+        if (g_debug) syslog(LOG_DEBUG, "DBG: daemonize()");
+        if (daemon(0, 0) < 0) {
+            syslog(LOG_ERR, "ERROR: daemon() %d: %s", errno, strerror(errno));
+            perror("ERROR: cannot daemonize");
+        };
+    }
+    
+    /* 
+     * AFTER THIS POINT, DO NOT USE perror() AS WE POSSIBLY ARE A DAEMON
+     * USE syslog() INSTEAD 
+     */
+    
+    /* daemon or not, display and write pid to file */
+    if (g_debug) syslog(LOG_DEBUG, "DBG: get pid %d", getpid());
+    FILE *pid_file = fopen(g_pidfile, "w+");
+    if (pid_file < 0) {
+        syslog(LOG_ERR, "ERROR: unable to open() %s: %d: %s", g_pidfile, errno, strerror(errno));
+    } else {
+        if (fprintf(pid_file, "%d\n", getpid()) < 0) {
+            syslog(LOG_WARNING, "WARN: unable to write to %s: %d: %s", g_pidfile, errno, strerror(errno));
+        }
+        if (fclose(pid_file) < 0) {
+            syslog(LOG_WARNING, "WARN: unable to close() %s: %d: %s", g_pidfile, errno, strerror(errno));
+        }
+        
+    }
+    
     while (1)
     {
-		syslog(LOG_DEBUG, "Waiting for incoming magic packets");
+        syslog(LOG_DEBUG, "Waiting for incoming magic packets");
         wol_rmt_len = sizeof(wol_rmt);
 
         if ((wol_len = recvfrom(
                 in_socket, wol_msg.data, ETH_DATA_LEN, 0,
                     (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
             //perror("ERROR: couldn't receive data from incoming socket");
-			syslog(LOG_ERR,"ERROR: recvfrom() %d: %s", errno, strerror(errno));
-	        exit(EXIT_FAILURE);
+            syslog(LOG_ERR,"ERROR: recvfrom() %d: %s", errno, strerror(errno));
+            exit(EXIT_FAILURE);
         }
 
         if (wol_len < WOL_MAGIC_LEN + ETH_ALEN) {
@@ -521,8 +522,8 @@ int main(int argc, char *argv[])
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
             //perror("ERROR: couldn't forward data to outgoing socket");
-			syslog(LOG_ERR,"ERROR: sendto() %d: %s", errno, strerror(errno));
-	        exit(EXIT_FAILURE);
+            syslog(LOG_ERR,"ERROR: sendto() %d: %s", errno, strerror(errno));
+            exit(EXIT_FAILURE);
         }
 
         syslog(LOG_NOTICE, "magic packet from %s forwarded to "
