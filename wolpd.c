@@ -170,6 +170,29 @@ void parse_options(int argc, char *argv[])
 }
 
 /*
+ * Find macaddress in given arrays
+ * @param   string      macaddress to search for
+ * @param   array       2-dimensional array to look in
+ * @param   array       1-dimensional array containing number of element of the 2-dimensional array
+ * @return  int         index of the found macaddress, -1 otherwise
+ */
+int find_macaddress(char *macaddress, char *mac_addresses[MAX_INTERFACES][MAX_MAC_ADDRESSES], int mac_address_cnt[MAX_INTERFACES]) {
+    unsigned int i = 0, j = 0;
+    for (i=0; i < MAX_INTERFACES; i++) {
+        for (j=0; j < mac_address_cnt[i]; j++) {
+            if (strcmp(macaddress, mac_addresses[i][j]) == 0) {
+                /* Matching MAC found so set that as the MAC address to send*/
+                //memcpy(send_mac, &buff[6], MAC_ADDRESS_SIZE);
+                syslog(LOG_NOTICE, "Found macaddress %s on interface #%d", macaddress, i);
+                if (g_foregnd) printf("Found macaddress %s on interface #%d\n", macaddress, i);
+                return (int)i;
+            }
+        }
+    }
+    /* not found */
+    return -1;
+}
+/*
  * Find files based on pattern
  * @param   string      directory to search in
  * @param   string      pattern to match to
@@ -228,7 +251,10 @@ char *get_filename_ext(char *filename) {
  * @param    int        count of mac addresses read
  */
 void read_config_per_interface(char *config_filename, char *mac_addresses[], int *mac_address_cnt) {
-    if (g_debug) syslog(LOG_DEBUG, "Try to read %s\n", config_filename);
+    if (g_debug) {
+        syslog(LOG_DEBUG, "Try to read %s", config_filename);
+        if (g_foregnd) printf("Try to read %s\n", config_filename);
+    }
     FILE *fp;
     //char mac_address_str [17];
     char *mac_address_str = malloc(sizeof (char*) * 18);
@@ -254,8 +280,8 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
             {
                 char *mac_address_compressed = malloc(sizeof (char*) * 12);        /* mac address without : char is 12 char long) */
                 mac_addresses[*mac_address_cnt] = malloc(sizeof (char*) * 12);
-                sprintf(mac_address_compressed, "%02x%02x%02x%02x%02x%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
-                sprintf(mac_addresses[*mac_address_cnt], "%02x%02x%02x%02x%02x%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
+                sprintf(mac_address_compressed, "%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx", a[0], a[1], a[2], a[3], a[4], a[5]);
+                sprintf(mac_addresses[*mac_address_cnt], "%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx", a[0], a[1], a[2], a[3], a[4], a[5]);
                 /*for (i=0; i<6;i++)
                 {
                     //mac_addresses [*mac_address_cnt][i] = a[i];
@@ -263,19 +289,21 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
                     mac_addresses [*mac_address_cnt][i] = (char*)a[i];
                 }*/
                 //syslog (LOG_INFO, "Found mac addresse %s\n", mac_addresses[*mac_address_cnt]);
+                if (g_debug) printf("found %s stored as %s\n", mac_address_str, mac_address_compressed);
                 (*mac_address_cnt)++;
             }
             else
             {
-                syslog (LOG_INFO, "Error in configuration file at line %d : '%s'\n", *mac_address_cnt, mac_address_str);
-                //syslog (LOG_DEBUG, "a[] = %02x:%02x:%02x:%02x:%02x:%02x", a[0], a[1], a[2], a[3], a[4], a[5]);
+                syslog(LOG_INFO, "Error in configuration file at line %d : '%s'", *mac_address_cnt, mac_address_str);
+                printf("Error in configuration file at line %d : '%s'\n", *mac_address_cnt, mac_address_str);
             }
             // read until end of line
             while (fgetc(fp) != '\n') {};
         }
     }
     fclose (fp);
-    syslog (LOG_INFO, "Found %d mac addresses in %s\n", *mac_address_cnt, config_filename);
+    syslog(LOG_INFO, "Found %d mac addresses in %s", *mac_address_cnt, config_filename);
+    printf("Found %d mac addresses in %s\n", *mac_address_cnt, config_filename);
 }
 
 /*
@@ -395,7 +423,8 @@ int main(int argc, char *argv[])
     char *mac_addresses[MAX_INTERFACES][MAX_MAC_ADDRESSES];
     int mac_address_cnt[MAX_INTERFACES];
     char *interface_names[MAX_INTERFACES];
-    unsigned int i = 0;
+    char *mac_address = malloc(sizeof (char*) * 18);
+    int i = 0;
 
     parse_options(argc, argv);
     
@@ -510,6 +539,18 @@ int main(int argc, char *argv[])
         memcpy(wol_msg.head.h_dest, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
         memcpy(wol_dst.sll_addr, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
 
+        sprintf(mac_address, "%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx", 
+            wol_msg.head.h_dest[0], wol_msg.head.h_dest[1],
+            wol_msg.head.h_dest[2], wol_msg.head.h_dest[3],
+            wol_msg.head.h_dest[4], wol_msg.head.h_dest[5]);
+        /* look for destination mac address in our config files */
+        if ((i = find_macaddress(mac_address, mac_addresses, mac_address_cnt)) < 0) {
+            syslog(LOG_ERR, "destination address %s unknown from config files... ignoring", mac_address);
+            if (g_foregnd) fprintf(stderr, "destination address %s unknown from config files... ignoring\n", mac_address);
+            /* no need to go further */
+            continue;
+        }
+
         /* commented out for testing purpose */
         /*if ((wol_len = sendto(
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
@@ -520,18 +561,20 @@ int main(int argc, char *argv[])
         }*/
 
         syslog(LOG_NOTICE, "magic packet from %s forwarded to "
-            "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx",
+            "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx via interface %s",
             inet_ntoa(wol_rmt.sin_addr),
             wol_msg.head.h_dest[0], wol_msg.head.h_dest[1],
             wol_msg.head.h_dest[2], wol_msg.head.h_dest[3],
-            wol_msg.head.h_dest[4], wol_msg.head.h_dest[5]
+            wol_msg.head.h_dest[4], wol_msg.head.h_dest[5],
+            interface_names[i]
         );
         if (g_foregnd) printf("magic packet from %s forwarded to "
-            "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx\n",
+            "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx via interface %s\n",
             inet_ntoa(wol_rmt.sin_addr),
             wol_msg.head.h_dest[0], wol_msg.head.h_dest[1],
             wol_msg.head.h_dest[2], wol_msg.head.h_dest[3],
-            wol_msg.head.h_dest[4], wol_msg.head.h_dest[5]
+            wol_msg.head.h_dest[4], wol_msg.head.h_dest[5],
+            interface_names[i]
         );
     }
 
