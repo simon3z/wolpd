@@ -439,17 +439,12 @@ int main(int argc, char *argv[])
     }
 
     /* this socket will be use for incoming packets */
-    if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
+    /*if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
         perror("ERROR: couldn't open internal socket");
         exit(EXIT_FAILURE);
-    }
+    }*/
 
-    if (init_wol_src() < 0) {
-        /* in normal execution, this code is never executed 
-         * because if there was a problem, the program has already exited */
-        syslog(LOG_INFO, "Interface %s does not exist.", g_iface);
-        exit(EXIT_FAILURE);
-    }
+    in_socket = init_wol_src();
     
     memcpy(wol_msg.head.h_source, ifhw.ifr_hwaddr.sa_data, ETH_ALEN);
     wol_msg.head.h_proto = htons(ETH_P_WOL);
@@ -532,7 +527,7 @@ int main(int argc, char *argv[])
             wol_msg.head.h_dest[4], wol_msg.head.h_dest[5]
         );
         if (g_foregnd) printf("magic packet from %s forwarded to "
-            "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx",
+            "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx\n",
             inet_ntoa(wol_rmt.sin_addr),
             wol_msg.head.h_dest[0], wol_msg.head.h_dest[1],
             wol_msg.head.h_dest[2], wol_msg.head.h_dest[3],
