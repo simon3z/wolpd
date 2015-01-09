@@ -510,13 +510,14 @@ int main(int argc, char *argv[])
         memcpy(wol_msg.head.h_dest, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
         memcpy(wol_dst.sll_addr, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
 
-        if ((wol_len = sendto(
+        /* commented out for testing purpose */
+        /*if ((wol_len = sendto(
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
             syslog(LOG_ERR,"ERROR: sendto() %d: %s", errno, strerror(errno));
             if (g_foregnd) perror("ERROR: sendto(): couldn't forward data to outgoing socket");
             exit(EXIT_FAILURE);
-        }
+        }*/
 
         syslog(LOG_NOTICE, "magic packet from %s forwarded to "
             "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx",
