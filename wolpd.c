@@ -483,10 +483,10 @@ int main(int argc, char *argv[])
         
     }
     
+    syslog(LOG_DEBUG, "Waiting for incoming magic packets...");
+    if (g_foregnd) printf("Waiting for incoming magic packets...\n");
     while (1)
     {
-        syslog(LOG_DEBUG, "Waiting for incoming magic packets...");
-        if (g_foregnd) printf("Waiting for incoming magic packets...\n");
         wol_rmt_len = sizeof(wol_rmt);
 
         if ((wol_len = recvfrom(
