@@ -43,7 +43,7 @@
 
 #define DEFAULT_IFACE       "eth0"
 #define DEFAULT_PORT        9
-#define DEFAULT_PIDFILE     "/var/run/wolpd.pid"
+#define DEFAULT_PIDFILE     "/var/run/"PACKAGE".pid"
 
 #define ETH_P_WOL           0x0842
 #define WOL_MAGIC_LEN       6
@@ -389,7 +389,7 @@ int main(int argc, char *argv[])
     /* search for list of mac address per vlan in configuration files 
      * config file must be named /etc/wolpd.${interface_name}
      */
-    if (find_configfiles("/etc", "wolpd.", config_filenames) < 0) {
+    if (find_configfiles("/etc", PACKAGE, config_filenames) < 0) {
         perror("ERROR: No config filenames found in /etc");
         exit(EXIT_FAILURE);
     }
@@ -409,7 +409,7 @@ int main(int argc, char *argv[])
         i++;
         if (i >= MAX_INTERFACES) {
             syslog(LOG_ERR, "ERROR: you reached maximum interfaces number allowed (%d). Try to increase MAX_INTERFACES in source code, recompile and retry.", MAX_INTERFACES);
-            syslog(LOG_ERR, "ERROR: wolpd will continue with your first %d interfaces found", MAX_INTERFACES);
+            syslog(LOG_ERR, "ERROR: %s will continue with your first %d interfaces found", PACKAGE, MAX_INTERFACES);
             break;
         }
     }
