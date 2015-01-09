@@ -183,6 +183,7 @@ int find_configfiles(char *directory, char *pattern, char *filename[]) {
     if (!dir) {
         //fprintf(stderr, "Cannot read directory '%s': ", cwd);
         syslog(LOG_ERR, "ERROR: Opening directory '%s' failed with error '%s'\n", directory, strerror(errno));
+        if (g_foregnd) perror("ERROR: Opening directory failed");
         exit(EXIT_FAILURE);
     }
     
@@ -281,7 +282,10 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
  * @return  int         socket
  */
 struct sockaddr_ll init_wol_dst(char *name) {
-    if (g_debug) syslog(LOG_DEBUG, "Try to connect to %s interface...", name);
+    if (g_debug) {
+        syslog(LOG_DEBUG, "Try to connect to %s interface...", name);
+        if (g_foregnd) printf("Try to connect to %s interface...\n", name);
+    }
     int iface_socket;
     struct ifreq ifhw;
     struct sockaddr_ll layer2;
@@ -295,16 +299,19 @@ struct sockaddr_ll init_wol_dst(char *name) {
     /* create a socket */
     if ((iface_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
         syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
+        if (g_foregnd) perror("ERROR: socket()");
         layer2.sll_ifindex = -1;
     }
     /* request mac address of interface to be sure it is really present */
     if (ioctl(iface_socket, SIOCGIFHWADDR, &ifhw) < 0) {
         syslog(LOG_ERR, "ERROR: ioctl() %s: %s", name, strerror(errno));
+        if (g_foregnd) perror("ERROR: ioctl()");
         layer2.sll_ifindex = -1;
     }
     /* close socket */
     if (close(iface_socket) < 0) {
         syslog(LOG_ERR, "ERROR: close() %s", strerror(errno));
+        if (g_foregnd) perror("ERROR: close()");
     }
     
     return layer2;
@@ -315,7 +322,10 @@ struct sockaddr_ll init_wol_dst(char *name) {
  * @return    int        incoming socket
  */
 int init_wol_src() {
-    if (g_debug) syslog(LOG_DEBUG, "Try to bind to %s interface...", g_iface);
+    if (g_debug) {
+        syslog(LOG_DEBUG, "Try to bind to %s interface...", g_iface);
+        if (g_foregnd) printf("Try to bind to %s interface...\n", g_iface);
+    }
     struct ifreq ifhw;
     struct sockaddr_in wol_src;
     int in_socket;
@@ -345,6 +355,7 @@ int init_wol_src() {
     /* get ipaddress */
     inet_ntop(AF_INET, &ifhw.ifr_addr.sa_data[2], ip_address, INET_ADDRSTRLEN);
     syslog(LOG_INFO, "Found address %s at %s", ip_address, g_iface);
+    if (g_foregnd) printf("Found address %s at %s\n", ip_address, g_iface);
     memset(&wol_src, 0, sizeof(wol_src));
     wol_src.sin_family      = AF_INET;
     //wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -405,10 +416,12 @@ int main(int argc, char *argv[])
             read_config_per_interface(config_full_path_name, mac_addresses[i], &mac_address_cnt[i]);
         } else {
             syslog(LOG_INFO, "Interface %s does not exist. No need to read %s", interface_names[i], config_full_path_name);
+            if (g_foregnd) printf("Interface %s does not exist. No need to read %s\n", interface_names[i], config_full_path_name);
         }
         i++;
         if (i >= MAX_INTERFACES) {
             syslog(LOG_ERR, "ERROR: you reached maximum interfaces number allowed (%d). Try to increase MAX_INTERFACES in source code, recompile and retry.", MAX_INTERFACES);
+            if (g_foregnd) perror("ERROR: you reached maximum interfaces number allowed. Try to increase MAX_INTERFACES in source code, recompile and retry.");
             syslog(LOG_ERR, "ERROR: %s will continue with your first %d interfaces found", PACKAGE, MAX_INTERFACES);
             break;
         }
@@ -469,7 +482,10 @@ int main(int argc, char *argv[])
     }
     
     /* daemon or not, display and write pid to file */
-    if (g_debug) syslog(LOG_DEBUG, "DBG: get pid %d", getpid());
+    if (g_debug) {
+        syslog(LOG_DEBUG, "DBG: get pid %d", getpid());
+        printf("DBG: get pid %d\n", getpid());
+    }
     FILE *pid_file = fopen(g_pidfile, "w+");
     if (pid_file < 0) {
         syslog(LOG_ERR, "ERROR: unable to open() %s: %d: %s", g_pidfile, errno, strerror(errno));
@@ -488,26 +504,29 @@ int main(int argc, char *argv[])
     
     while (1)
     {
-        syslog(LOG_DEBUG, "Waiting for incoming magic packets");
+        syslog(LOG_DEBUG, "Waiting for incoming magic packets...");
+        if (g_foregnd) printf("Waiting for incoming magic packets...\n");
         wol_rmt_len = sizeof(wol_rmt);
 
         if ((wol_len = recvfrom(
                 in_socket, wol_msg.data, ETH_DATA_LEN, 0,
                     (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
-            if (g_foregnd) perror("ERROR: couldn't receive data from incoming socket");
             syslog(LOG_ERR,"ERROR: recvfrom() %d: %s", errno, strerror(errno));
+            if (g_foregnd) perror("ERROR: couldn't receive data from incoming socket");
             exit(EXIT_FAILURE);
         }
 
         if (wol_len < WOL_MAGIC_LEN + ETH_ALEN) {
             syslog(LOG_ERR,
                 "packet too short from %s", inet_ntoa(wol_rmt.sin_addr));
+            if (g_foregnd) fprintf(stderr, "ERROR: packet too short from %s\n", inet_ntoa(wol_rmt.sin_addr));
             continue;
         }
 
         if (memcmp(wol_msg.data, wol_magic, WOL_MAGIC_LEN) != 0) {
             syslog(LOG_ERR,
                 "unknown packed from %s", inet_ntoa(wol_rmt.sin_addr));
+            if (g_foregnd) fprintf(stderr, "ERROR: unknown packed from %s\n", inet_ntoa(wol_rmt.sin_addr));
             continue;
         }
 
@@ -517,8 +536,8 @@ int main(int argc, char *argv[])
         if ((wol_len = sendto(
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
-            if (g_foregnd) perror("ERROR: couldn't forward data to outgoing socket");
             syslog(LOG_ERR,"ERROR: sendto() %d: %s", errno, strerror(errno));
+            if (g_foregnd) perror("ERROR: couldn't forward data to outgoing socket");
             exit(EXIT_FAILURE);
         }
 
