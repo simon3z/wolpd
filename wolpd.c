@@ -63,10 +63,10 @@ typedef int bool;
 enum { false, true };
 
 /* global options */
-char*       g_iface    = DEFAULT_IFACE;
+char*       g_iface     = DEFAULT_IFACE;
 uint16_t    g_port      = DEFAULT_PORT;
 bool        g_foregnd   = false;
-char*       g_pidfile  = DEFAULT_PIDFILE;
+char*       g_pidfile   = DEFAULT_PIDFILE;
 bool        g_debug     = false;
 
 /*
@@ -161,6 +161,9 @@ void parse_options(int argc, char *argv[])
                 break;
             case 'f':
                 g_foregnd = true;
+                break;
+            case 'p':
+                g_port = (unsigned short)atoi(optarg);
                 break;
         }
     }
