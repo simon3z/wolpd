@@ -372,6 +372,8 @@ int init_wol_src() {
         }
         exit(EXIT_FAILURE);
     }
+    syslog(LOG_INFO, "Listening on %s %s:%d", g_iface, ip_address, g_port);
+    if (g_foregnd) printf("Listening on %s %s:%d\n", g_iface, ip_address, g_port);
     return in_socket;
 }
 
