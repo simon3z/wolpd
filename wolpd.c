@@ -65,7 +65,7 @@ enum { false, true };
 /* global options */
 char        *g_iface    = DEFAULT_IFACE;
 uint16_t    g_port      = DEFAULT_PORT;
-int         g_foregnd   = 0;
+bool        g_foregnd   = false;
 char        *g_pidfile  = DEFAULT_PIDFILE;
 bool        g_debug     = false;
 
@@ -160,7 +160,7 @@ void parse_options(int argc, char *argv[])
                 g_iface = optarg;
                 break;
             case 'f':
-                g_foregnd = 1;
+                g_foregnd = true;
                 break;
         }
     }
@@ -460,11 +460,6 @@ int main(int argc, char *argv[])
     wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
     wol_src.sin_port        = htons(g_port);
 
-    /*if (bind(out_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
-        perror("ERROR: couldn't bind to local interface");
-        exit(EXIT_FAILURE);
-    }*/
-
     if (g_foregnd == 0) {
         if (g_debug) syslog(LOG_DEBUG, "DBG: daemonize()");
         if (daemon(0, 0) < 0) {
@@ -473,22 +468,20 @@ int main(int argc, char *argv[])
         };
     }
     
-    /* 
-     * AFTER THIS POINT, DO NOT USE perror() AS WE POSSIBLY ARE A DAEMON
-     * USE syslog() INSTEAD 
-     */
-    
     /* daemon or not, display and write pid to file */
     if (g_debug) syslog(LOG_DEBUG, "DBG: get pid %d", getpid());
     FILE *pid_file = fopen(g_pidfile, "w+");
     if (pid_file < 0) {
         syslog(LOG_ERR, "ERROR: unable to open() %s: %d: %s", g_pidfile, errno, strerror(errno));
+        if (g_foregnd) perror("ERROR: unable to open() pidfile");
     } else {
         if (fprintf(pid_file, "%d\n", getpid()) < 0) {
             syslog(LOG_WARNING, "WARN: unable to write to %s: %d: %s", g_pidfile, errno, strerror(errno));
+            if (g_foregnd) perror("WARN: unable to write() to pidfile");
         }
         if (fclose(pid_file) < 0) {
             syslog(LOG_WARNING, "WARN: unable to close() %s: %d: %s", g_pidfile, errno, strerror(errno));
+            if (g_foregnd) perror("WARN: unable to close() to pidfile");
         }
         
     }
@@ -501,7 +494,7 @@ int main(int argc, char *argv[])
         if ((wol_len = recvfrom(
                 in_socket, wol_msg.data, ETH_DATA_LEN, 0,
                     (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
-            //perror("ERROR: couldn't receive data from incoming socket");
+            if (g_foregnd) perror("ERROR: couldn't receive data from incoming socket");
             syslog(LOG_ERR,"ERROR: recvfrom() %d: %s", errno, strerror(errno));
             exit(EXIT_FAILURE);
         }
@@ -524,7 +517,7 @@ int main(int argc, char *argv[])
         if ((wol_len = sendto(
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
-            //perror("ERROR: couldn't forward data to outgoing socket");
+            if (g_foregnd) perror("ERROR: couldn't forward data to outgoing socket");
             syslog(LOG_ERR,"ERROR: sendto() %d: %s", errno, strerror(errno));
             exit(EXIT_FAILURE);
         }
