@@ -381,7 +381,7 @@ int main(int argc, char *argv[])
     struct eth_frame wol_msg;
     ssize_t wol_len;
     struct ifreq ifhw;
-    struct sockaddr_in wol_src, wol_rmt;
+    struct sockaddr_in wol_rmt;
     struct sockaddr_ll wol_dst;
     struct sockaddr_ll wol_dst_int[MAX_INTERFACES];
     socklen_t wol_rmt_len;
@@ -446,32 +446,8 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     
-    /* initializing wol destination */
-    strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
-
-    if (ioctl(in_socket, SIOCGIFINDEX, &ifhw) < 0) {
-        perror("ERROR: couldn't request adapter index");
-        exit(EXIT_FAILURE);
-    }
-
-    memset(&wol_dst, 0, sizeof(wol_dst));
-    wol_dst.sll_family  = AF_PACKET;
-    wol_dst.sll_ifindex = ifhw.ifr_ifindex;
-    wol_dst.sll_halen   = ETH_ALEN;
-
-    /* initializing wol message */
-    if (ioctl(in_socket, SIOCGIFHWADDR, &ifhw) < 0) {
-        perror("ERROR: couldn't request local hwaddress");
-        exit(EXIT_FAILURE);
-    }
-
     memcpy(wol_msg.head.h_source, ifhw.ifr_hwaddr.sa_data, ETH_ALEN);
     wol_msg.head.h_proto = htons(ETH_P_WOL);
-
-    memset(&wol_src, 0, sizeof(wol_src));
-    wol_src.sin_family      = AF_INET;
-    wol_src.sin_addr.s_addr = htonl(INADDR_ANY);
-    wol_src.sin_port        = htons(g_port);
 
     if (g_foregnd == 0) {
         if (g_debug) syslog(LOG_DEBUG, "DBG: daemonize()");
