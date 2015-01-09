@@ -63,10 +63,10 @@ typedef int bool;
 enum { false, true };
 
 /* global options */
-char        *g_iface    = DEFAULT_IFACE;
+char*       g_iface    = DEFAULT_IFACE;
 uint16_t    g_port      = DEFAULT_PORT;
 bool        g_foregnd   = false;
-char        *g_pidfile  = DEFAULT_PIDFILE;
+char*       g_pidfile  = DEFAULT_PIDFILE;
 bool        g_debug     = false;
 
 /*
@@ -512,7 +512,8 @@ int main(int argc, char *argv[])
                 in_socket, wol_msg.data, ETH_DATA_LEN, 0,
                     (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
             syslog(LOG_ERR,"ERROR: recvfrom() %d: %s", errno, strerror(errno));
-            if (g_foregnd) perror("ERROR: couldn't receive data from incoming socket");
+            //if (g_foregnd) perror("ERROR: couldn't receive data from incoming socket");
+            if (g_foregnd) perror("ERROR: recvfrom()");
             exit(EXIT_FAILURE);
         }
 
@@ -525,7 +526,7 @@ int main(int argc, char *argv[])
 
         if (memcmp(wol_msg.data, wol_magic, WOL_MAGIC_LEN) != 0) {
             syslog(LOG_ERR,
-                "unknown packed from %s", inet_ntoa(wol_rmt.sin_addr));
+                "ERROR: unknown packed from %s", inet_ntoa(wol_rmt.sin_addr));
             if (g_foregnd) fprintf(stderr, "ERROR: unknown packed from %s\n", inet_ntoa(wol_rmt.sin_addr));
             continue;
         }
@@ -537,11 +538,18 @@ int main(int argc, char *argv[])
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
             syslog(LOG_ERR,"ERROR: sendto() %d: %s", errno, strerror(errno));
-            if (g_foregnd) perror("ERROR: couldn't forward data to outgoing socket");
+            if (g_foregnd) perror("ERROR: sendto(): couldn't forward data to outgoing socket");
             exit(EXIT_FAILURE);
         }
 
         syslog(LOG_NOTICE, "magic packet from %s forwarded to "
+            "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx",
+            inet_ntoa(wol_rmt.sin_addr),
+            wol_msg.head.h_dest[0], wol_msg.head.h_dest[1],
+            wol_msg.head.h_dest[2], wol_msg.head.h_dest[3],
+            wol_msg.head.h_dest[4], wol_msg.head.h_dest[5]
+        );
+        if (g_foregnd) printf("magic packet from %s forwarded to "
             "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx",
             inet_ntoa(wol_rmt.sin_addr),
             wol_msg.head.h_dest[0], wol_msg.head.h_dest[1],
