@@ -78,6 +78,9 @@ void onExit() {
     unlink(g_pidfile);
 }
 
+/*
+ * Register some signals to terminate program
+ */
 void register_signals() {
     /* register signals */
     struct sigaction action;
