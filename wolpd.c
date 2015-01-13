@@ -449,12 +449,57 @@ int init_wol_src() {
     return in_socket;
 }
 
+/*
+ * initialize wol packet
+ * @return   eth_frame   wol message
+ */
+struct eth_frame init_wol_msg() {
+    struct eth_frame wol_msg;
+    struct ifreq ifhw;
+    char *ip_address = malloc(sizeof (char*) * INET_ADDRSTRLEN);
+    int in_socket;
+    unsigned int i = 0;
+
+    /*  create the socket */
+    //if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
+    if ((in_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
+        perror("ERROR: socket() ");
+        exit(EXIT_FAILURE);
+    }
+
+    /* initialize interface by name */
+    memset(&ifhw, 0, sizeof(struct ifreq));
+    ifhw.ifr_addr.sa_family = AF_INET;
+    strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
+
+    /* request hw address */
+    if (ioctl(in_socket, SIOCGIFHWADDR, &ifhw) == -1) {
+        syslog(LOG_ERR, "ERROR: ioctl() %s: %s", g_iface, strerror(errno));
+        perror("ERROR: ioctl() ");
+        exit(EXIT_FAILURE);
+    }
+
+    memcpy(wol_msg.head.h_source, ifhw.ifr_hwaddr.sa_data, ETH_ALEN);
+    
+    /*
+     * DEBUG
+     */
+    if (g_debug) {
+        printf("DBG: ifhw.ifr_hwaddr.sa_data = %s\n", binToHex((char*)ifhw.ifr_hwaddr.sa_data, ETH_ALEN));
+    }
+    
+    /* set protocol */
+    wol_msg.head.h_proto = htons(ETH_P_WOL);
+
+    return wol_msg;
+}
+
 int main(int argc, char *argv[])
 {
     int out_socket, in_socket;
     struct eth_frame wol_msg;
     ssize_t wol_len;
-    struct ifreq ifhw;
     struct sockaddr_in wol_rmt;
     //struct sockaddr_ll wol_dst;
     struct sockaddr_ll wol_dst_int[MAX_INTERFACES];
@@ -503,16 +548,14 @@ int main(int argc, char *argv[])
     }
 
     /* this socket will be use for outgoing packets */
-    if ((out_socket = socket(PF_PACKET, SOCK_DGRAM, 0)) < 0 ) {
+    if ((out_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
         perror("ERROR: couldn't open external socket");
         exit(EXIT_FAILURE);
     }
 
     in_socket = init_wol_src();
+    wol_msg = init_wol_msg();
     
-    memcpy(wol_msg.head.h_source, ifhw.ifr_hwaddr.sa_data, ETH_ALEN);
-    wol_msg.head.h_proto = htons(ETH_P_WOL);
-
     if (g_foregnd == 0) {
         if (g_debug) syslog(LOG_DEBUG, "DBG: daemonize()");
         if (daemon(0, 0) < 0) {
@@ -549,9 +592,7 @@ int main(int argc, char *argv[])
         i = 0;
         wol_rmt_len = sizeof(wol_rmt);
 
-        if ((wol_len = recvfrom(
-                in_socket, wol_msg.data, ETH_DATA_LEN, 0,
-                    (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
+        if ((wol_len = recvfrom(in_socket, wol_msg.data, ETH_DATA_LEN, 0, (struct sockaddr *) &wol_rmt, &wol_rmt_len)) < 0) {
             syslog(LOG_ERR,"ERROR: recvfrom() %d: %s", errno, strerror(errno));
             //if (g_foregnd) perror("ERROR: couldn't receive data from incoming socket");
             if (g_foregnd) perror("ERROR: recvfrom()");
@@ -564,15 +605,13 @@ int main(int argc, char *argv[])
         printf("DBG: wol_rmt.sin_port = %d\n", ntohs(wol_rmt.sin_port));
 
         if (wol_len < WOL_MAGIC_LEN + ETH_ALEN) {
-            syslog(LOG_ERR,
-                "packet too short from %s", inet_ntoa(wol_rmt.sin_addr));
+            syslog(LOG_ERR, "packet too short from %s", inet_ntoa(wol_rmt.sin_addr));
             if (g_foregnd) fprintf(stderr, "ERROR: packet too short from %s\n", inet_ntoa(wol_rmt.sin_addr));
             continue;
         }
 
         if (memcmp(wol_msg.data, wol_magic, WOL_MAGIC_LEN) != 0) {
-            syslog(LOG_ERR,
-                "ERROR: unknown packed from %s", inet_ntoa(wol_rmt.sin_addr));
+            syslog(LOG_ERR, "ERROR: unknown packed from %s", inet_ntoa(wol_rmt.sin_addr));
             if (g_foregnd) fprintf(stderr, "ERROR: unknown packed from %s\n", inet_ntoa(wol_rmt.sin_addr));
             continue;
         }
@@ -590,7 +629,10 @@ int main(int argc, char *argv[])
             /* no need to go further */
             continue;
         }
-
+        if (g_debug) {
+            syslog(LOG_INFO,"Found macaddress %s on interface %s", mac_address, interface_names[i]);
+            if (g_foregnd) printf("Found macaddress %s on interface %s\n", mac_address, interface_names[i]);
+        }
         memcpy(wol_dst_int[i].sll_addr, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
 
         /*
@@ -598,14 +640,13 @@ int main(int argc, char *argv[])
          */
         printf("DBG: wol_msg.head.h_dest    = %s\n", binToHex((char*)wol_msg.head.h_dest, ETH_ALEN));
         printf("DBG: wol_msg.head.h_source  = %s\n", binToHex((char*)wol_msg.head.h_source, ETH_ALEN));
-        printf("DBG: wol_msg.head.h_proto   = %#2.2hhx\n", wol_msg.head.h_proto);
+        printf("DBG: wol_msg.head.h_proto   = %#2.4x\n", ntohs(wol_msg.head.h_proto));
         printf("DBG: wol_msg.data           = %s\n", binToHex((char*)wol_msg.data, ETH_DATA_LEN));
         printf("DBG: wol_dst_int[%d].sll_addr    = %s\n", i, binToHex((char*)wol_dst_int[i].sll_addr, ETH_ALEN));
         printf("DBG: wol_dst_int[%d].sll_family  = %d\n", i, wol_dst_int[i].sll_family);
         printf("DBG: wol_dst_int[%d].sll_ifindex = %d\n", i, wol_dst_int[i].sll_ifindex);
         printf("DBG: wol_dst_int[%d].sll_halen   = %d\n", i, wol_dst_int[i].sll_halen);
         
-        /* commented out for testing purpose */
         if ((wol_len = sendto(
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
                     (struct sockaddr *) &wol_dst_int[i], sizeof(wol_dst_int[i]))) < 0) {
