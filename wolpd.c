@@ -274,8 +274,8 @@ char *binToHex(char *bin, size_t length) {
         if (g_foregnd) printf("binToHex(): %s => %s\n", bin, hex);
     }*/
     
-    //free(chr);
-    //free(hex);
+    free(chr);
+    free(hex);
     
     return hex;
 }
@@ -327,6 +327,9 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
                 //syslog (LOG_INFO, "Found mac addresse %s\n", mac_addresses[*mac_address_cnt]);
                 if (g_debug) printf("found %s stored as %s\n", mac_address_str, mac_address_compressed);
                 (*mac_address_cnt)++;
+                
+                free(mac_address_compressed);
+                free(mac_addresses[*mac_address_cnt]);
             }
             else
             {
@@ -340,6 +343,7 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
     fclose (fp);
     syslog(LOG_INFO, "Found %d mac addresses in %s", *mac_address_cnt, config_filename);
     printf("Found %d mac addresses in %s\n", *mac_address_cnt, config_filename);
+    free(mac_address_str);
 }
 
 /*
@@ -461,6 +465,9 @@ int init_wol_src() {
     }
     syslog(LOG_INFO, "Listening on %s %s:%d", g_iface, ip_address, g_port);
     if (g_foregnd) printf("Listening on %s %s:%d\n", g_iface, ip_address, g_port);
+    
+    free(ip_address);
+    
     return in_socket;
 }
 
@@ -597,6 +604,8 @@ int main(int argc, char *argv[])
         }
         
     }
+    
+    free(config_full_path_name);
     
     syslog(LOG_DEBUG, "Waiting for incoming magic packets...");
     if (g_foregnd) printf("Waiting for incoming magic packets...\n");
