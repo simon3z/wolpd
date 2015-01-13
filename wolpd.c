@@ -68,6 +68,7 @@ uint16_t    g_port      = DEFAULT_PORT;
 bool        g_foregnd   = false;
 char*       g_pidfile   = DEFAULT_PIDFILE;
 bool        g_debug     = false;
+bool        g_devel     = false;
 
 /*
  * Try to clean som stuff left around
@@ -116,6 +117,8 @@ void usage_and_exit()
 %s is a Wake-On-Lan proxy daemon.\n\n\
 Usage: %s [OPTION]...\n\n\
 Options:\n\
+  -d, --debug             print debug informations.\n\
+  -D, --devel             print development informations.\n\
   -h, --help              print this help, then exit.\n\
   -v, --version           print version number, then exit.\n\
   -f, --foreground        don't fork to background.\n\
@@ -135,6 +138,7 @@ void parse_options(int argc, char *argv[])
         int option_index = 0;
         static struct option long_options[] = {
             {"debug", 0, 0, 'd'},
+            {"devel", 0, 0, 'D'},
             {"help", 0, 0, 'h'},
             {"version", 0, 0, 'v'},
             {"foreground", 0, 0, 'f'},
@@ -143,10 +147,13 @@ void parse_options(int argc, char *argv[])
             {NULL, 0, NULL, 0}
         };
 
-        if ((c = getopt_long(argc, argv, "hvi:fp:d",
+        if ((c = getopt_long(argc, argv, "hvi:fp:dD",
                      long_options, &option_index)) == -1) break;
 
         switch (c) {
+            case 'D':
+                g_devel = true;
+                break;
             case 'd':
                 g_debug = true;
                 break;
@@ -181,10 +188,10 @@ int find_macaddress(char *macaddress, char *mac_addresses[MAX_INTERFACES][MAX_MA
     for (i=0; i < MAX_INTERFACES; i++) {
         for (j=0; j < mac_address_cnt[i]; j++) {
             if (strcmp(macaddress, mac_addresses[i][j]) == 0) {
-                /* Matching MAC found so set that as the MAC address to send*/
-                //memcpy(send_mac, &buff[6], MAC_ADDRESS_SIZE);
-                syslog(LOG_NOTICE, "Found macaddress %s on interface #%d", macaddress, i);
-                if (g_foregnd) printf("Found macaddress %s on interface #%d\n", macaddress, i);
+                if (g_debug) {
+                    syslog(LOG_NOTICE, "Found macaddress %s on interface #%d", macaddress, i);
+                    if (g_foregnd) printf("Found macaddress %s on interface #%d\n", macaddress, i);
+                }
                 return (int)i;
             }
         }
@@ -262,7 +269,7 @@ char *binToHex(char *bin, size_t length) {
         //printf("'%2.2hhx' => '%s' => '%s' \n", bin[i], chr, hex);
     }
     
-    /*if (g_debug) {
+    /*if (g_devel) {
         syslog(LOG_DEBUG, "binToHex(): %s => %s", bin, hex);
         if (g_foregnd) printf("binToHex(): %s => %s\n", bin, hex);
     }*/
@@ -386,11 +393,13 @@ struct sockaddr_ll init_wol_dst(char *name) {
     layer2.sll_halen   = ETH_ALEN;
 
     /*
-     * DEBUG
+     * DEVEL
      */
-    printf("layer2.sll_family  = %d\n", layer2.sll_family);
-    printf("layer2.sll_ifindex = %d\n", layer2.sll_ifindex);
-    printf("layer2.sll_halen   = %d\n", layer2.sll_halen);
+    if (g_devel) {
+        printf("DBG: layer2.sll_family  = %d\n", layer2.sll_family);
+        printf("DBG: layer2.sll_ifindex = %d\n", layer2.sll_ifindex);
+        printf("DBG: layer2.sll_halen   = %d\n", layer2.sll_halen);
+    }
     
     return layer2;
 }
@@ -487,9 +496,9 @@ struct eth_frame init_wol_msg() {
     memcpy(wol_msg.head.h_source, ifhw.ifr_hwaddr.sa_data, ETH_ALEN);
     
     /*
-     * DEBUG
+     * DEVEL
      */
-    if (g_debug) {
+    if (g_devel) {
         printf("DBG: ifhw.ifr_hwaddr.sa_data = %s\n", binToHex((char*)ifhw.ifr_hwaddr.sa_data, ETH_ALEN));
     }
     
@@ -603,10 +612,12 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
         /*
-         * DEBUG
+         * DEVEL
          */
-        printf("DBG: wol_rmt.sin_addr = %s\n", inet_ntoa(wol_rmt.sin_addr));
-        printf("DBG: wol_rmt.sin_port = %d\n", ntohs(wol_rmt.sin_port));
+        if (g_devel) {
+            printf("DBG: wol_rmt.sin_addr = %s\n", inet_ntoa(wol_rmt.sin_addr));
+            printf("DBG: wol_rmt.sin_port = %d\n", ntohs(wol_rmt.sin_port));
+        }
 
         if (wol_len < WOL_MAGIC_LEN + ETH_ALEN) {
             syslog(LOG_ERR, "packet too short from %s", inet_ntoa(wol_rmt.sin_addr));
@@ -642,14 +653,16 @@ int main(int argc, char *argv[])
         /*
          * DEBUG
          */
-        printf("DBG: wol_msg.head.h_dest    = %s\n", binToHex((char*)wol_msg.head.h_dest, ETH_ALEN));
-        printf("DBG: wol_msg.head.h_source  = %s\n", binToHex((char*)wol_msg.head.h_source, ETH_ALEN));
-        printf("DBG: wol_msg.head.h_proto   = %#2.4x\n", ntohs(wol_msg.head.h_proto));
-        printf("DBG: wol_msg.data           = %s\n", binToHex((char*)wol_msg.data, ETH_DATA_LEN));
-        printf("DBG: wol_dst_int[%d].sll_addr    = %s\n", i, binToHex((char*)wol_dst_int[i].sll_addr, ETH_ALEN));
-        printf("DBG: wol_dst_int[%d].sll_family  = %d\n", i, wol_dst_int[i].sll_family);
-        printf("DBG: wol_dst_int[%d].sll_ifindex = %d\n", i, wol_dst_int[i].sll_ifindex);
-        printf("DBG: wol_dst_int[%d].sll_halen   = %d\n", i, wol_dst_int[i].sll_halen);
+        if (g_devel) {
+            printf("DBG: wol_msg.head.h_dest    = %s\n", binToHex((char*)wol_msg.head.h_dest, ETH_ALEN));
+            printf("DBG: wol_msg.head.h_source  = %s\n", binToHex((char*)wol_msg.head.h_source, ETH_ALEN));
+            printf("DBG: wol_msg.head.h_proto   = %#2.4x\n", ntohs(wol_msg.head.h_proto));
+            printf("DBG: wol_msg.data           = %s\n", binToHex((char*)wol_msg.data, ETH_DATA_LEN));
+            printf("DBG: wol_dst_int[%d].sll_addr    = %s\n", i, binToHex((char*)wol_dst_int[i].sll_addr, ETH_ALEN));
+            printf("DBG: wol_dst_int[%d].sll_family  = %d\n", i, wol_dst_int[i].sll_family);
+            printf("DBG: wol_dst_int[%d].sll_ifindex = %d\n", i, wol_dst_int[i].sll_ifindex);
+            printf("DBG: wol_dst_int[%d].sll_halen   = %d\n", i, wol_dst_int[i].sll_halen);
+        }
         
         if ((wol_len = sendto(
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
