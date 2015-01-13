@@ -245,6 +245,35 @@ char *get_filename_ext(char *filename) {
 }
 
 /*
+ * stringify a binary string to hex string
+ * @param   string  binary string
+ * @return  string  hexadecimal string
+ */
+char *binToHex(char *bin, size_t length) {
+    //size_t length = strlen(bin);
+    char *hex = malloc(sizeof (char*) * length);
+    strcpy(hex, "\0");
+    char *chr = malloc(sizeof (char*));
+    size_t i = 0;
+    for (i = 0; i < length; i++) {
+        if (bin[i] == '\0') break;
+        sprintf(chr, "%2.2hhx", bin[i]);
+        strcat(hex, chr);
+        //printf("'%2.2hhx' => '%s' => '%s' \n", bin[i], chr, hex);
+    }
+    
+    /*if (g_debug) {
+        syslog(LOG_DEBUG, "binToHex(): %s => %s", bin, hex);
+        if (g_foregnd) printf("binToHex(): %s => %s\n", bin, hex);
+    }*/
+    
+    //free(chr);
+    //free(hex);
+    
+    return hex;
+}
+
+/*
  * Read config file and store data in arrays
  * @param    string     config filename to read
  * @param    array      array of mac addresses read
@@ -320,30 +349,42 @@ struct sockaddr_ll init_wol_dst(char *name) {
     int iface_socket;
     struct ifreq ifhw;
     struct sockaddr_ll layer2;
+
     /* initializing interface by name */
     strncpy(ifhw.ifr_name, name, sizeof(ifhw.ifr_name));
     memset(&layer2, 0, sizeof(layer2));
-    layer2.sll_family  = AF_PACKET;
-    layer2.sll_ifindex = ifhw.ifr_ifindex;
-    layer2.sll_halen   = ETH_ALEN;
 
     /* create a socket */
     if ((iface_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
         syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
         if (g_foregnd) perror("ERROR: socket()");
-        layer2.sll_ifindex = -1;
+        //layer2.sll_ifindex = -1;
+        return layer2;
     }
     /* request mac address of interface to be sure it is really present */
     if (ioctl(iface_socket, SIOCGIFHWADDR, &ifhw) < 0) {
         syslog(LOG_ERR, "ERROR: ioctl() %s: %s", name, strerror(errno));
         if (g_foregnd) perror("ERROR: ioctl()");
-        layer2.sll_ifindex = -1;
+        //layer2.sll_ifindex = -1;
+        return layer2;
     }
     /* close socket */
     if (close(iface_socket) < 0) {
         syslog(LOG_ERR, "ERROR: close() %s", strerror(errno));
         if (g_foregnd) perror("ERROR: close()");
+        return layer2;
     }
+    
+    layer2.sll_family  = AF_PACKET;
+    layer2.sll_ifindex = ifhw.ifr_ifindex;
+    layer2.sll_halen   = ETH_ALEN;
+
+    /*
+     * DEBUG
+     */
+    printf("layer2.sll_family  = %d\n", layer2.sll_family);
+    printf("layer2.sll_ifindex = %d\n", layer2.sll_ifindex);
+    printf("layer2.sll_halen   = %d\n", layer2.sll_halen);
     
     return layer2;
 }
@@ -415,7 +456,7 @@ int main(int argc, char *argv[])
     ssize_t wol_len;
     struct ifreq ifhw;
     struct sockaddr_in wol_rmt;
-    struct sockaddr_ll wol_dst;
+    //struct sockaddr_ll wol_dst;
     struct sockaddr_ll wol_dst_int[MAX_INTERFACES];
     socklen_t wol_rmt_len;
     char *config_full_path_name = malloc(sizeof (char*) * 256);            /* temporary variable to store full path name of current config filename */
@@ -462,16 +503,10 @@ int main(int argc, char *argv[])
     }
 
     /* this socket will be use for outgoing packets */
-    if ((out_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+    if ((out_socket = socket(PF_PACKET, SOCK_DGRAM, 0)) < 0 ) {
         perror("ERROR: couldn't open external socket");
         exit(EXIT_FAILURE);
     }
-
-    /* this socket will be use for incoming packets */
-    /*if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
-        perror("ERROR: couldn't open internal socket");
-        exit(EXIT_FAILURE);
-    }*/
 
     in_socket = init_wol_src();
     
@@ -511,6 +546,7 @@ int main(int argc, char *argv[])
     if (g_foregnd) printf("Waiting for incoming magic packets...\n");
     while (1)
     {
+        i = 0;
         wol_rmt_len = sizeof(wol_rmt);
 
         if ((wol_len = recvfrom(
@@ -521,6 +557,11 @@ int main(int argc, char *argv[])
             if (g_foregnd) perror("ERROR: recvfrom()");
             exit(EXIT_FAILURE);
         }
+        /*
+         * DEBUG
+         */
+        printf("DBG: wol_rmt.sin_addr = %s\n", inet_ntoa(wol_rmt.sin_addr));
+        printf("DBG: wol_rmt.sin_port = %d\n", ntohs(wol_rmt.sin_port));
 
         if (wol_len < WOL_MAGIC_LEN + ETH_ALEN) {
             syslog(LOG_ERR,
@@ -536,8 +577,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        memcpy(wol_msg.head.h_dest, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
-        memcpy(wol_dst.sll_addr, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
+        memcpy(wol_msg.head.h_dest,     wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
 
         sprintf(mac_address, "%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx", 
             wol_msg.head.h_dest[0], wol_msg.head.h_dest[1],
@@ -551,14 +591,28 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        memcpy(wol_dst_int[i].sll_addr, wol_msg.data + WOL_MAGIC_LEN, ETH_ALEN);
+
+        /*
+         * DEBUG
+         */
+        printf("DBG: wol_msg.head.h_dest    = %s\n", binToHex((char*)wol_msg.head.h_dest, ETH_ALEN));
+        printf("DBG: wol_msg.head.h_source  = %s\n", binToHex((char*)wol_msg.head.h_source, ETH_ALEN));
+        printf("DBG: wol_msg.head.h_proto   = %#2.2hhx\n", wol_msg.head.h_proto);
+        printf("DBG: wol_msg.data           = %s\n", binToHex((char*)wol_msg.data, ETH_DATA_LEN));
+        printf("DBG: wol_dst_int[%d].sll_addr    = %s\n", i, binToHex((char*)wol_dst_int[i].sll_addr, ETH_ALEN));
+        printf("DBG: wol_dst_int[%d].sll_family  = %d\n", i, wol_dst_int[i].sll_family);
+        printf("DBG: wol_dst_int[%d].sll_ifindex = %d\n", i, wol_dst_int[i].sll_ifindex);
+        printf("DBG: wol_dst_int[%d].sll_halen   = %d\n", i, wol_dst_int[i].sll_halen);
+        
         /* commented out for testing purpose */
-        /*if ((wol_len = sendto(
+        if ((wol_len = sendto(
                 out_socket, &wol_msg, (size_t) wol_len + ETH_HLEN, 0,
-                    (struct sockaddr *) &wol_dst, sizeof(wol_dst))) < 0) {
+                    (struct sockaddr *) &wol_dst_int[i], sizeof(wol_dst_int[i]))) < 0) {
             syslog(LOG_ERR,"ERROR: sendto() %d: %s", errno, strerror(errno));
             if (g_foregnd) perror("ERROR: sendto(): couldn't forward data to outgoing socket");
             exit(EXIT_FAILURE);
-        }*/
+        }
 
         syslog(LOG_NOTICE, "magic packet from %s forwarded to "
             "%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx:%2.2hhx via interface %s",
