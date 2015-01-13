@@ -368,6 +368,12 @@ struct sockaddr_ll init_wol_dst(char *name) {
         //layer2.sll_ifindex = -1;
         return layer2;
     }
+    /* request index of interface */
+    if (ioctl(iface_socket, SIOCGIFINDEX, &ifhw) < 0) {
+        syslog(LOG_ERR, "ERROR: ioctl() %s: %s", name, strerror(errno));
+        if (g_foregnd) perror("ERROR: ioctl()");
+        return layer2;
+    }
     /* close socket */
     if (close(iface_socket) < 0) {
         syslog(LOG_ERR, "ERROR: close() %s", strerror(errno));
@@ -456,9 +462,7 @@ int init_wol_src() {
 struct eth_frame init_wol_msg() {
     struct eth_frame wol_msg;
     struct ifreq ifhw;
-    char *ip_address = malloc(sizeof (char*) * INET_ADDRSTRLEN);
     int in_socket;
-    unsigned int i = 0;
 
     /*  create the socket */
     //if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
