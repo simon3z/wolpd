@@ -21,33 +21,56 @@ forward the received magic packets to appropriate subnet.
 ### Building from the repository (requires autoreconf):
 
 ```console
-  $ ./autogen.sh
-  $ ./configure
-  $ make
+$ ./autogen.sh
+$ ./configure
+$ make
 ```
 
 ### Building the tarball package:
 
 ```console
-  $ make dist-gzip
+$ make dist-gzip
 ```
 
 ### Building the rpms:
 
 ```console
-  $ make rpmbuild
+$ make rpmbuild
 ```
 
 ## Install Instructions
 
 ```console
-  # make install
+# make install
 ```
+
+## How it works ?
+
+*wolpd* listen on a network interface for incoming wol magic packet.
+It then try to find on wich outgoing interface the destination machine is.
+To find it, *wolpd* reads configuration files in `/etc` named after each 
+network interface :
+```console
+/etc/wolpd.eth0
+/etc/wolpd.eth1
+/etc/wolpd.eth2
+...
+```
+and so on.
+Each of these files contain one hardware address per line of the form
+```console
+xx:xx:xx:xx:xx:xx
+```
+
+If it do not find the destination wol mac address of the magic packet in any 
+configuration files, it discard the packet.  
+If it find a match in any file, it build another wol magic packet and send it
+on the correct interface.
 
 ## Use Instructions
 
 ```console
-  # ./wolpd -h
+# ./wolpd -h
 wolpd is a Wake-On-Lan proxy daemon.
 
 Usage: wolpd [OPTION]...
@@ -67,6 +90,6 @@ Report bugs to <cadegenn@univ-lr.fr>.
 ## Debugging Tips
 
 ```console
-  # tcpdump -i <interface> ether proto 0x0842
+# tcpdump -i <interface> ether proto 0x0842
 ```
 
