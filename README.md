@@ -38,15 +38,15 @@ forward the received magic packets to appropriate subnet.
   $ make rpmbuild
 ```
 
-Install Instructions
-====================
+## Install Instructions
 
 ```console
   # make install
 ```
 
-Debugging Tips
-==============
+## Use Instructions
+
+## Debugging Tips
 
 ```console
   # tcpdump -i <interface> ether proto 0x0842
