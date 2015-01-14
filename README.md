@@ -46,6 +46,24 @@ forward the received magic packets to appropriate subnet.
 
 ## Use Instructions
 
+```console
+  # ./wolpd -h
+wolpd is a Wake-On-Lan proxy daemon.
+
+Usage: wolpd [OPTION]...
+
+Options:
+  -d, --debug             print debug informations.
+  -D, --devel             print development informations.
+  -h, --help              print this help, then exit.
+  -v, --version           print version number, then exit.
+  -f, --foreground        don't fork to background.
+  -i, --interface=IFACE   source network interface (default: eth0).
+  -p, --port=PORT         udp port used for wol packets (default: 9).
+
+Report bugs to <cadegenn@univ-lr.fr>.
+```
+
 ## Debugging Tips
 
 ```console
