@@ -1,5 +1,5 @@
 /* wolpd - Wake-On-LAN Proxy Daemon
- * Copyright (C) 2015  Charles-Antoine Degennes <cadegenn@univ-lr.fr>
+ * Copyright (C) 2015  Charles-Antoine Degennes <cadegenn@gmail.com>
  * Copyright (C) 2010  Federico Simoncelli <federico.simoncelli@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
