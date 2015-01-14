@@ -20,7 +20,7 @@ forward the received magic packets to appropriate subnet.
 
 ### Building from the repository (requires autoreconf):
 
-```sh
+```console
   $ ./autogen.sh
   $ ./configure
   $ make
@@ -28,27 +28,27 @@ forward the received magic packets to appropriate subnet.
 
 ### Building the tarball package:
 
-```sh
+```console
   $ make dist-gzip
 ```
 
 ### Building the rpms:
 
-```sh
+```console
   $ make rpmbuild
 ```
 
 Install Instructions
 ====================
 
-```sh
+```console
   # make install
 ```
 
 Debugging Tips
 ==============
 
-```sh
+```console
   # tcpdump -i <interface> ether proto 0x0842
 ```
 
