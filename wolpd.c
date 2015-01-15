@@ -664,11 +664,20 @@ int main(int argc, char *argv[])
          * DEBUG
          */
         if (g_devel) {
-            printf("DBG: wol_msg.head.h_dest    = %s\n", binToHex((char*)wol_msg.head.h_dest, ETH_ALEN));
-            printf("DBG: wol_msg.head.h_source  = %s\n", binToHex((char*)wol_msg.head.h_source, ETH_ALEN));
+            printf("DBG: wol_msg.head.h_dest    = %2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx\n",
+                wol_msg.head.h_dest[0], wol_msg.head.h_dest[1],
+                wol_msg.head.h_dest[2], wol_msg.head.h_dest[3],
+                wol_msg.head.h_dest[4], wol_msg.head.h_dest[5]);
+            printf("DBG: wol_msg.head.h_source  = %2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx\n",
+                wol_msg.head.h_source[0], wol_msg.head.h_source[1],
+                wol_msg.head.h_source[2], wol_msg.head.h_source[3],
+                wol_msg.head.h_source[4], wol_msg.head.h_source[5]);
             printf("DBG: wol_msg.head.h_proto   = %#2.4x\n", ntohs(wol_msg.head.h_proto));
             printf("DBG: wol_msg.data           = %s\n", binToHex((char*)wol_msg.data, ETH_DATA_LEN));
-            printf("DBG: wol_dst_int[%d].sll_addr    = %s\n", i, binToHex((char*)wol_dst_int[i].sll_addr, ETH_ALEN));
+            printf("DBG: wol_dst_int[%d].sll_addr    = %2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx\n", i,
+                wol_dst_int[i].sll_addr[0], wol_dst_int[i].sll_addr[1],
+                wol_dst_int[i].sll_addr[2], wol_dst_int[i].sll_addr[3],
+                wol_dst_int[i].sll_addr[4], wol_dst_int[i].sll_addr[5]);
             printf("DBG: wol_dst_int[%d].sll_family  = %d\n", i, wol_dst_int[i].sll_family);
             printf("DBG: wol_dst_int[%d].sll_ifindex = %d\n", i, wol_dst_int[i].sll_ifindex);
             printf("DBG: wol_dst_int[%d].sll_halen   = %d\n", i, wol_dst_int[i].sll_halen);
