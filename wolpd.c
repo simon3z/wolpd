@@ -367,7 +367,7 @@ struct sockaddr_ll init_wol_dst(char *name) {
     memset(&layer2, 0, sizeof(layer2));
 
     /* create a socket */
-    if ((iface_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
+    if ((iface_socket = socket(PF_PACKET, SOCK_DGRAM, 0)) < 0 ) {
         syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
         if (g_foregnd) perror("ERROR: socket()");
         //layer2.sll_ifindex = -1;
@@ -674,6 +674,7 @@ int main(int argc, char *argv[])
                 wol_msg.head.h_source[4], wol_msg.head.h_source[5]);
             printf("DBG: wol_msg.head.h_proto   = %#2.4x\n", ntohs(wol_msg.head.h_proto));
             printf("DBG: wol_msg.data           = %s\n", binToHex((char*)wol_msg.data, ETH_DATA_LEN));
+            printf("DBG: wol_msg.data length    = %zu bytes\n", strlen((char*)wol_msg.data));
             printf("DBG: wol_dst_int[%d].sll_addr    = %2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx%2.2hhx\n", i,
                 wol_dst_int[i].sll_addr[0], wol_dst_int[i].sll_addr[1],
                 wol_dst_int[i].sll_addr[2], wol_dst_int[i].sll_addr[3],
