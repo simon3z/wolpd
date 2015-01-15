@@ -99,6 +99,7 @@ void version_and_exit()
 {
     printf("\
 %s\n\n\
+Copyright (C) 2015 Charles-Antoine Degennes\n\
 Copyright (C) 2010 Federico Simoncelli\n\
 License GPLv3+: \
 GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
