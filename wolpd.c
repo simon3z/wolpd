@@ -335,7 +335,7 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
             else
             {
                 syslog(LOG_INFO, "Error in configuration file at line %d : '%s'", *mac_address_cnt, mac_address_str);
-                printf("Error in configuration file at line %d : '%s'\n", *mac_address_cnt, mac_address_str);
+                if (g_foregnd) printf("Error in configuration file at line %d : '%s'\n", *mac_address_cnt, mac_address_str);
             }
             // read until end of line
             while (fgetc(fp) != '\n') {};
@@ -343,7 +343,7 @@ void read_config_per_interface(char *config_filename, char *mac_addresses[], int
     }
     fclose (fp);
     syslog(LOG_INFO, "Found %d mac addresses in %s", *mac_address_cnt, config_filename);
-    printf("Found %d mac addresses in %s\n", *mac_address_cnt, config_filename);
+    if (g_foregnd) printf("Found %d mac addresses in %s\n", *mac_address_cnt, config_filename);
     free(mac_address_str);
 }
 
@@ -428,7 +428,7 @@ int init_wol_src() {
     //if ((in_socket = socket(PF_PACKET, SOCK_RAW, 0)) < 0 ) {
     if ((in_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         syslog(LOG_ERR, "ERROR: socket() %s", strerror(errno));
-        perror("ERROR: socket() ");
+        if (g_foregnd) perror("ERROR: socket() ");
         exit(EXIT_FAILURE);
     }
     //setsockopt(in_socket, SOL_SOCKET, SO_REUSEADDR, (void*) &optVal, optLen);
@@ -440,7 +440,7 @@ int init_wol_src() {
     strncpy(ifhw.ifr_name, g_iface, sizeof(ifhw.ifr_name));
     if (ioctl(in_socket, SIOCGIFADDR, &ifhw) == -1) {
         syslog(LOG_ERR, "ERROR: ioctl() %s: %s", g_iface, strerror(errno));
-        perror("ERROR: ioctl() ");
+        if (g_foregnd) perror("ERROR: ioctl() ");
         exit(EXIT_FAILURE);
     }
     
@@ -457,10 +457,10 @@ int init_wol_src() {
     /* bind socket to interface */
     if (bind(in_socket, (struct sockaddr *) &wol_src, sizeof(wol_src)) < 0) {
         syslog(LOG_ERR, "ERROR: bind() %d: %s", errno, strerror(errno));
-        perror("ERROR: couldn't bind to local interface");
+        if (g_foregnd) perror("ERROR: couldn't bind to local interface");
         if (close(in_socket) < 0) {
             syslog(LOG_ERR, "ERROR: close() %d: %s", errno, strerror(errno));
-            perror("ERROR: couldn't close socket");
+            if (g_foregnd) perror("ERROR: couldn't close socket");
         }
         exit(EXIT_FAILURE);
     }
