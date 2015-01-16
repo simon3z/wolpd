@@ -113,7 +113,7 @@
 
 # Check for missing binaries (stale symlinks should not happen)
 # Note: Special treatment of stop for LSB conformance
-WOLPD_BIN=@sbin@/wolpd
+WOLPD_BIN=@sbindir@/wolpd
 test -x $WOLPD_BIN || { echo "$WOLPD_BIN not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
