@@ -186,8 +186,8 @@ void parse_options(int argc, char *argv[])
  */
 int find_macaddress(char *macaddress, char *mac_addresses[MAX_INTERFACES][MAX_MAC_ADDRESSES], int mac_address_cnt[MAX_INTERFACES]) {
     unsigned int i = 0, j = 0;
-    for (i=0; i < MAX_INTERFACES; i++) {
-        for (j=0; j < mac_address_cnt[i]; j++) {
+    for (i = 0; i < MAX_INTERFACES; i++) {
+        for (j = 0; j < mac_address_cnt[i]; j++) {
             if (strcmp(macaddress, mac_addresses[i][j]) == 0) {
                 if (g_debug) {
                     syslog(LOG_NOTICE, "Found macaddress %s on interface #%d", macaddress, i);
