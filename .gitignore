@@ -20,6 +20,7 @@ Makefile.in
 /wolpd
 /wolpd.8
 /wolpd.init
+/wolpd.init.sles
 /wolpd.spec
 /build/
 /nbproject/
