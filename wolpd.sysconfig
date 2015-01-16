@@ -1,5 +1,9 @@
 # wolpd - Wake-On-LAN proxy daemon extra arguments 
 
+# by default, wolpd listen on interface eth0 port 9
+# another classic port is port 40000
+
 # example:
 #WOLPDARGS="-i eth0"
-
+# example:
+#WOLPDAR4GS="-i eth1 -p 40000"
