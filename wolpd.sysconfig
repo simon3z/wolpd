@@ -4,6 +4,6 @@
 # another classic port is port 40000
 
 # example:
-#WOLPDARGS="-i eth0"
+#WOLPD_ARGS="-i eth0"
 # example:
-#WOLPDAR4GS="-i eth1 -p 40000"
+#WOLPD_ARGS="-i eth1 -p 40000"
