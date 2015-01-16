@@ -24,7 +24,7 @@ make %{?_smp_mflags}
 %install
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
-%{__install} -D -m 755 wolpd.init \
+%{__install} -D -m 755 wolpd.init.sles \
     $RPM_BUILD_ROOT/%{_sysconfdir}/init.d/wolpd
 %{__install} -D -m 755 wolpd.sysconfig \
     $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig/wolpd
@@ -53,7 +53,7 @@ fi
 %defattr(-,root,root,-)
 %doc AUTHORS COPYING NEWS ChangeLog README
 %config(noreplace) %{_sysconfdir}/sysconfig/wolpd
-%{_sysconfdir}/rc.d/init.d/wolpd
+%{_sysconfdir}/init.d/wolpd
 %{_sbindir}/wolpd
 %{_mandir}/man8/wolpd.8*
 
