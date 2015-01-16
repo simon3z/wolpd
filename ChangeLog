@@ -3,6 +3,7 @@
 	* listen to one interface (can be specified by -i)
 	* port can be specified on command line (-p)
 	* read list of mac address in config files at /etc/wolpd.${interface_name}
+	* add an initscript for SLES (tested on SLES 11)
 
 2010-02-12  Federico Simoncelli <federico.simoncelli@gmail.com>
 
