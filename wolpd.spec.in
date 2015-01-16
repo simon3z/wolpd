@@ -5,7 +5,7 @@ Summary:        Wake-On-Lan proxy daemon
 
 Group:          System Environment/Daemons
 License:        GPLv3+
-URL:            http://github.com/simon3z/wolpd
+URL:            http://github.com/cadegenn/wolpd
 Source0:        %{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -25,7 +25,7 @@ make %{?_smp_mflags}
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
 %{__install} -D -m 755 wolpd.init \
-    $RPM_BUILD_ROOT/%{_sysconfdir}/rc.d/init.d/wolpd
+    $RPM_BUILD_ROOT/%{_sysconfdir}/init.d/wolpd
 %{__install} -D -m 755 wolpd.sysconfig \
     $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig/wolpd
 
@@ -59,6 +59,7 @@ fi
 
 
 %changelog
+* Wed Jan 16 2015 Charles-Antoine Degennes <cadegenn@gmail.com> 1.0.0-1
 * Fri Feb 12 2010 Federico Simoncelli <federico.simoncelli@gmail.com> 0.5.0-1
 - first release
 
