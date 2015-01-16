@@ -1,3 +1,9 @@
+2015-01-15  Charles-Antoine Degennes <cadegenn@gmail.com>
+	version 1.0.0
+	* listen to one interface (can be specified by -i)
+	* port can be specified on command line (-p)
+	* read list of mac address in config files at /etc/wolpd.${interface_name}
+
 2010-02-12  Federico Simoncelli <federico.simoncelli@gmail.com>
 
 	version 0.5.0
