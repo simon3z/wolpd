@@ -1,4 +1,4 @@
-2015-01-15  Charles-Antoine Degennes <cadegenn@gmail.com>
+2015-01-16  Charles-Antoine Degennes <cadegenn@gmail.com>
 	version 1.0.0
 	* listen to one interface (can be specified by -i)
 	* port can be specified on command line (-p)
