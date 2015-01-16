@@ -18,6 +18,9 @@ forward the received magic packets to appropriate subnet.
 
 ## Build Instructions
 
+:warning: For the moment, it build only on linux. Any help would be appreciated
+to try to make it build on *BSD
+
 ### Building from the repository (requires autoreconf):
 
 ```console
