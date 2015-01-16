@@ -2,7 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([wolpd], [0.5.0], [federico.simoncelli@gmail.com])
+#AC_INIT([wolpd], [0.5.0], [federico.simoncelli@gmail.com])
+AC_INIT([wolpd], [1.0.0], [cadegenn@gmail.com])
 AM_INIT_AUTOMAKE()
 AC_CONFIG_SRCDIR([wolpd.c])
 AC_CONFIG_HEADERS([config.h])
@@ -27,5 +28,5 @@ AC_TYPE_UINT8_T
 # Checks for library functions.
 AC_CHECK_FUNCS([inet_ntoa memset socket])
 
-AC_CONFIG_FILES([Makefile wolpd.init wolpd.spec])
+AC_CONFIG_FILES([Makefile wolpd.init.sles wolpd.spec])
 AC_OUTPUT
