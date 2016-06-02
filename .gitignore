@@ -5,6 +5,7 @@ Makefile.in
 /aclocal.m4
 /autom4te.cache
 /autoscan.log
+/compile
 /config.h
 /config.h.in
 /config.h.in~
