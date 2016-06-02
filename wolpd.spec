@@ -1,5 +1,5 @@
 Name:           wolpd
-Version:        0.5.0
+Version:        0.5.1
 Release:        1%{?dist}
 Summary:        Wake-On-Lan proxy daemon
 
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Jun 2 2016 Federico Simoncelli <federico.simoncelli@gmail.com> 0.5.1-1
+- update to 0.5.1
+
 * Fri Feb 12 2010 Federico Simoncelli <federico.simoncelli@gmail.com> 0.5.0-1
 - first release
-

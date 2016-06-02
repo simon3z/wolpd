@@ -1,5 +1,22 @@
-2010-02-12  Federico Simoncelli <federico.simoncelli@gmail.com>
+2016-06-02 Federico Simoncelli <federico.simoncelli@gmail.com>
 
-	version 0.5.0
-	* first release
+- build: rpm cleanup and initial support for copr
+- spec: move wolpd to be a systemd service
+- wolpd: handle possible daemon call failure
+- build: dropping custom CFLAGS conflicting with ARM
+- git: add compile to gitignore
+- make: update Makefile.am formatting
+- add rpmbuild target, build process cleanup
+- add gitignore file
+- use daemon function to detach and run in background
+- docs: add debugging tips
 
+2010-02-12 Federico Simoncelli <federico.simoncelli@gmail.com>
+
+- version 0.5.0
+- improved ethernet frame, add gpl license
+- checking wol packet length
+- logging after the packet is forwarded
+- forwarding raw ethernet frame, improved help strings
+- project URL fix
+- first commit
