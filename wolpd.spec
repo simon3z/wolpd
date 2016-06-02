@@ -56,7 +56,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc AUTHORS COPYING NEWS ChangeLog README
+%doc AUTHORS COPYING NEWS ChangeLog README.md
 %config(noreplace) %{_sysconfdir}/sysconfig/wolpd
 %{_sbindir}/wolpd
 %{_unitdir}/wolpd.service
