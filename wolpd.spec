@@ -1,14 +1,18 @@
-Name:           @PACKAGE@
-Version:        @PACKAGE_VERSION@
+Name:           wolpd
+Version:        0.5.0
 Release:        1%{?dist}
 Summary:        Wake-On-Lan proxy daemon
 
 Group:          System Environment/Daemons
 License:        GPLv3+
 URL:            http://github.com/simon3z/wolpd
-Source0:        %{name}-%{version}.tar.gz
+Source0:        https://github.com/simon3z/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
 
 %{?systemd_requires}
+
+BuildRequires:  autoconf
+BuildRequires:  automake
+BuildRequires:  help2man
 BuildRequires:  systemd
 
 
@@ -20,6 +24,7 @@ Wake-On-Lan proxy daemon.
 
 
 %build
+test -x ./configure || ./autogen.sh
 %configure
 make %{?_smp_mflags}
 

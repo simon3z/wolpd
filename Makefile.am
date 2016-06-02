@@ -15,15 +15,5 @@ wolpd_SOURCES = wolpd.c
 
 dist_man8_MANS = wolpd.8
 
-wolpd.8:
+wolpd.8: wolpd
 	$(HELP2MAN) -s 8 -N -I wolpd.x -o $@ $(top_srcdir)/wolpd
-
-.PHONY: rpmbuild
-
-rpm_builddir = $(abs_builddir)/rpmbuild
-RPMBUILD = rpmbuild --define '_topdir $(rpm_builddir)'
-
-rpmbuild: dist-gzip
-	$(MKDIR_P) $(rpm_builddir)
-	$(RPMBUILD) -ta $(distdir).tar.gz
-
