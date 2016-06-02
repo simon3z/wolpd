@@ -179,7 +179,12 @@ int main(int argc, char *argv[])
         goto exit_fail3;
     }
 
-    if (g_foregnd == 0) daemon(0, 0);
+    if (g_foregnd == 0) {
+        if (daemon(0, 0) != 0) {
+            perror("couldn't fork to a background process");
+            goto exit_fail3;
+        }
+    }
 
     while (1)
     {
