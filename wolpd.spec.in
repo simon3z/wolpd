@@ -7,7 +7,10 @@ Group:          System Environment/Daemons
 License:        GPLv3+
 URL:            http://github.com/simon3z/wolpd
 Source0:        %{name}-%{version}.tar.gz
-BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
+%{?systemd_requires}
+BuildRequires:  systemd
+
 
 %description
 Wake-On-Lan proxy daemon.
@@ -24,8 +27,8 @@ make %{?_smp_mflags}
 %install
 rm -rf $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
-%{__install} -D -m 755 wolpd.init \
-    $RPM_BUILD_ROOT/%{_sysconfdir}/rc.d/init.d/wolpd
+%{__install} -D -m 755 wolpd.service \
+    $RPM_BUILD_ROOT/%{_unitdir}/wolpd.service
 %{__install} -D -m 755 wolpd.sysconfig \
     $RPM_BUILD_ROOT/%{_sysconfdir}/sysconfig/wolpd
 
@@ -35,26 +38,23 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %post
-/sbin/chkconfig --add wolpd
+%systemd_post wolpd.service
 
 
 %preun
-if [ $1 = 0 ]; then
-    /sbin/service wolpd stop > /dev/null 2>&1
-    /sbin/chkconfig --del wolpd
-fi
+%systemd_preun wolpd.service
 
 
 %postun
-/sbin/service wolpd condrestart >/dev/null 2>&1 || :
+%systemd_postun_with_restart wolpd.service
 
 
 %files
 %defattr(-,root,root,-)
 %doc AUTHORS COPYING NEWS ChangeLog README
 %config(noreplace) %{_sysconfdir}/sysconfig/wolpd
-%{_sysconfdir}/rc.d/init.d/wolpd
 %{_sbindir}/wolpd
+%{_unitdir}/wolpd.service
 %{_mandir}/man8/wolpd.8*
 
 
