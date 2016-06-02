@@ -1,15 +1,18 @@
 
-EXTRA_DIST		= wolpd.x wolpd.spec wolpd.sysconfig
+EXTRA_DIST = \
+	wolpd.spec \
+	wolpd.sysconfig \
+	wolpd.x
 
-SUFFIXES		= .x .8
-HELP2MAN		= help2man
+SUFFIXES = .x .8
+HELP2MAN = help2man
 
-ACLOCAL_AMFLAGS		= -I m4
+ACLOCAL_AMFLAGS = -I m4
 
-sbin_PROGRAMS		= wolpd
-wolpd_SOURCES		= wolpd.c
+sbin_PROGRAMS = wolpd
+wolpd_SOURCES = wolpd.c
 
-dist_man8_MANS		= wolpd.8
+dist_man8_MANS = wolpd.8
 
 wolpd.8:
 	$(HELP2MAN) -s 8 -N -I wolpd.x -o $@ $(top_srcdir)/wolpd
