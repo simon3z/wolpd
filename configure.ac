@@ -11,7 +11,6 @@ AC_CONFIG_HEADERS([config.h])
 AC_PROG_CC
 
 # Configure default CFLAGS.
-CFLAGS="-g -O2 -Wall -Wshadow -Wconversion"
 
 # Checks for libraries.
 
