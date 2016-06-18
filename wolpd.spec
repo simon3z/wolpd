@@ -1,5 +1,5 @@
 Name:           wolpd
-Version:        0.5.1
+Version:        0.5.2
 Release:        1%{?dist}
 Summary:        Wake-On-Lan proxy daemon
 
@@ -64,6 +64,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Sun Jun 19 2016 Federico Simoncelli <fsimonce@redhat.com> 0.5.2-1
+- new package built with tito
+
 * Thu Jun 2 2016 Federico Simoncelli <federico.simoncelli@gmail.com> 0.5.1-1
 - update to 0.5.1
 
