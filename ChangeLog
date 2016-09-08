@@ -1,3 +1,7 @@
+2016-09-08  Charles-Antoine Degennes <cadegenn@gmail.com>
+	version 1.0.1
+	* add CentOS init script
+
 2015-01-16  Charles-Antoine Degennes <cadegenn@gmail.com>
 	version 1.0.0
 	* listen to one interface (can be specified by -i)

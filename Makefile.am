@@ -8,6 +8,7 @@ ACLOCAL_AMFLAGS		= -I m4
 
 sbin_PROGRAMS		= wolpd
 wolpd_SOURCES		= wolpd.c
+bin_SCRIPTS		= wolpd.init.centos wolpd.init.sles
 
 dist_man8_MANS		= wolpd.8
 

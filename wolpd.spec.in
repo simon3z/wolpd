@@ -59,6 +59,7 @@ fi
 
 
 %changelog
+* Thu Sep 08 2016 Charles-Antoine Degennes <cadegenn@gmail.com> 1.0.1-1
 * Wed Jan 16 2015 Charles-Antoine Degennes <cadegenn@gmail.com> 1.0.0-1
 * Fri Feb 12 2010 Federico Simoncelli <federico.simoncelli@gmail.com> 0.5.0-1
 - first release

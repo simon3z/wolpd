@@ -23,4 +23,5 @@ Makefile.in
 /wolpd.init.sles
 /wolpd.spec
 /build/
+/install/
 /nbproject/

@@ -1,0 +1,166 @@
+#!/bin/bash
+#
+# wolpd		Wake-On-Lan proxy daemon
+#
+# chkconfig: 2345 55 25
+# description: Wake-On-Lan proxy daemon.
+#
+#     Template SUSE system startup script for example service/daemon wolpd
+#     Copyright (C) 1995--2005  Kurt Garloff, SUSE / Novell Inc.
+#          
+#     This library is free software; you can redistribute it and/or modify it
+#     under the terms of the GNU Lesser General Public License as published by
+#     the Free Software Foundation; either version 2.1 of the License, or (at
+#     your option) any later version.
+#			      
+#     This library is distributed in the hope that it will be useful, but
+#     WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     Lesser General Public License for more details.
+#      
+#     You should have received a copy of the GNU Lesser General Public
+#     License along with this library; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
+#     USA.
+#
+# /etc/init.d/wolpd
+#   and its symbolic link
+# @sbindir@/rcwolpd
+#
+# processname: wolpd
+# config: /etc/wolpd.vlan*
+# pidfile: /var/run/wolpd.pid
+
+### BEGIN INIT INFO
+# Provides: wolpd
+# Required-Start: $local_fs $network $syslog
+# Required-Stop: $local_fs $syslog
+# Should-Start: $syslog
+# Should-Stop: $network $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: wolpd daemon providing Wake-On-Lan relay
+# Description:       Start wolpd to allow wol packets to be transmetted
+#	to right interface
+### END INIT INFO
+
+# source function library
+. /etc/rc.d/init.d/functions
+
+# Check for missing binaries (stale symlinks should not happen)
+# Note: Special treatment of stop for LSB conformance
+WOLPD_BIN=@sbindir@/wolpd
+test -x $WOLPD_BIN || { 
+    echo "$WOLPD_BIN not installed"; 
+    echo_failure;
+    if [ "$1" = "stop" ]; then exit 0;
+    else exit 5; fi;
+}
+
+# Check for existence of needed config file and read it
+WOLPD_CONFIG=/etc/sysconfig/wolpd
+test -r $WOLPD_CONFIG || {
+    echo "$WOLPD_CONFIG not existing";
+    echo_failure
+    if [ "$1" = "stop" ]; then exit 0;
+    else exit 6; fi;
+}
+
+# Read config	
+# pull in sysconfig settings
+[ -f "${WOLPD_CONFIG}" ] && source "${WOLPD_CONFIG}"
+
+RETVAL=0
+prog="wolpd"
+lockfile=/var/lock/subsys/$prog
+
+# Some functions to make the below more readable
+PID_FILE=/var/run/wolpd.pid
+
+runlevel=$(set -- $(runlevel); eval "echo \$$#" )
+
+start()
+{
+	echo -n "Starting wolpd "
+	## Start daemon with startproc(8). If this fails
+	## the return value is set appropriately by startproc.
+	daemon $WOLPD_BIN $WOLPD_ARGS
+
+	RETVAL=$?
+	[ $RETVAL -eq 0 ] && touch $lockfile
+	echo
+	return $RETVAL
+}
+
+stop()
+{
+	echo -n $"Stopping $prog: "
+	killproc -p $PID_FILE $WOLPD_BIN
+	RETVAL=$?
+	# if we are in halt or reboot runlevel kill all running sessions
+	# so the TCP connections are closed cleanly
+	if [ "x$runlevel" = x0 -o "x$runlevel" = x6 ] ; then
+	    trap '' TERM
+	    killall $prog 2>/dev/null
+	    trap TERM
+	fi
+	[ $RETVAL -eq 0 ] && rm -f $lockfile
+	echo
+}
+
+reload()
+{
+	echo -n $"Reloading $prog: "
+	killproc -p $PID_FILE ${WOLPD_BIN} -HUP
+	RETVAL=$?
+	echo
+}
+
+restart() {
+	stop
+	start
+}
+
+force_reload() {
+	restart
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		restart
+		;;
+	reload)
+		reload
+		;;
+	force-reload)
+		force_reload
+		;;
+	condrestart|try-restart)
+		if [ -f $lockfile ] ; then
+			if [ $RETVAL -eq 0 ] ; then
+				stop
+				# avoid race
+				sleep 3
+				start
+			else
+				RETVAL=6
+			fi
+		fi
+		;;
+	status)
+		RETVAL=$?
+		if [ $RETVAL -eq 3 -a -f $lockfile ] ; then
+			RETVAL=2
+		fi
+		;;
+	*)
+        	echo "Usage: $0 {start|stop|status|try-restart|restart|force-reload|reload|probe}"
+		RETVAL=2
+esac
+exit $RETVAL
