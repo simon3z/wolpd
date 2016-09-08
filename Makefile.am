@@ -13,7 +13,7 @@ bin_SCRIPTS		= wolpd.init.centos wolpd.init.sles
 dist_man8_MANS		= wolpd.8
 
 wolpd.8:
-	$(HELP2MAN) -s 8 -N -I wolpd.x -o $@ $(top_srcdir)/wolpd
+	$(HELP2MAN) -s 8 -N -I wolpd.x -o $@ $(builddir)/wolpd
 
 .PHONY: rpmbuild
 
