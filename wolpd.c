@@ -1,5 +1,5 @@
 /* wolpd - Wake-On-LAN Proxy Daemon
- * Copyright (C) 2015  Charles-Antoine Degennes <cadegenn@gmail.com>
+ * Copyright (C) 2015-2016  Charles-Antoine Degennes <cadegenn@gmail.com>
  * Copyright (C) 2010  Federico Simoncelli <federico.simoncelli@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -99,7 +99,7 @@ void version_and_exit()
 {
     printf("\
 %s\n\n\
-Copyright (C) 2015 Charles-Antoine Degennes\n\
+Copyright (C) 2015-2016 Charles-Antoine Degennes\n\
 Copyright (C) 2010 Federico Simoncelli\n\
 License GPLv3+: \
 GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
@@ -247,7 +247,7 @@ int find_configfiles(char *directory, char *pattern, char *filename[]) {
  * @return  string      extension
  */
 char *get_filename_ext(char *filename) {
-    char *dot = strrchr(filename, '.');
+    char *dot = strchr(filename, '.');
     if(!dot || dot == filename) return "";
     return dot + 1;
 }
