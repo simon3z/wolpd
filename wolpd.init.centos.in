@@ -154,10 +154,16 @@ case "$1" in
 		fi
 		;;
 	status)
+                status -p ${PID_FILE} ${prog}
 		RETVAL=$?
 		if [ $RETVAL -eq 3 -a -f $lockfile ] ; then
 			RETVAL=2
 		fi
+                if [ ${RETVAL} -eq 0 ]; then
+                    success
+                else
+                    failure
+                fi
 		;;
 	*)
         	echo "Usage: $0 {start|stop|status|try-restart|restart|force-reload|reload|probe}"
